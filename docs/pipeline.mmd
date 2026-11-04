@@ -1,0 +1,30 @@
+flowchart TD
+    A[Source Code] --> B[Lexer]
+    B --> C[Parser]
+    C --> D[EAST]
+    D --> SA[Semantic Analysis]
+    SA --> E
+
+    subgraph E["Xenoxy Runtime"]
+        direction LR
+
+        subgraph F["Execution"]
+            direction TD
+            G[Interpreter]
+            H[Scheduler]
+        end
+
+        subgraph I["Runtime Services"]
+            direction TD
+            J[StateManager]
+            K[Environment]
+        end
+
+        subgraph L["I/O Subsystem"]
+            direction TD
+            M[TTY]
+        end
+
+        F <--> L
+        F <--> I
+    end

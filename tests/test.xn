@@ -1,0 +1,6 @@
+fn main() -> int {
+    var a: int = 10;
+    var b: int = 20;
+    var c: int = a + b;
+    return c;
+}

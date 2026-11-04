@@ -1,0 +1,102 @@
+program = 
+    {
+    function_scope |
+    declaration_statement
+    };
+
+scope = 
+    function_scope |
+    loop_scope |
+    conditional_scope |
+    anonymous_scope;
+
+function_scope = 
+    "fn", identifier,
+    "(", [parameter, {",", parameter}], ")", "->", type,
+    "{", {statement | scope}, "}";
+
+loop_scope =
+    ("while"|"until"),
+    "(", expression, ")",
+    "{", {statement | scope}, "}";
+
+conditional_scope = 
+    ("if"|"unless"),
+    "(", expression, ")",
+    "{", {statement | scope}, "}",
+    {
+        "elif",
+        "(", expression, ")",
+        "{", {statement | scope}, "}"
+    },
+    [
+        "else",
+        "{", {statement | scope}, "}"
+    ];
+
+anonymous_scope =
+    "{", {statement | scope}, "}";
+
+parameter = 
+    identifier, ":", type;
+
+statement =
+    (
+        io_statement |
+        assignment_statement |
+        declaration_statement |
+        return_statement |
+        expression
+    ), ';';
+
+io_statement = 
+    identifier, "<-", expression;
+
+assignment_statement =
+    identifier, "=", expression;
+
+declaration_statement = 
+    "var", identifier, ":", type, ["=", expression];
+
+return_statement = 
+    "return", [expression];
+
+identifier = 
+    base_identifier, [".", identifier];
+
+base_identifier = 
+    (letter|"_"),{letter|digit|"_"};
+
+letter = 
+    "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" |
+    "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z" |
+    "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" |
+    "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z";
+
+digit = 
+    "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
+
+expression =
+    function_call_expression |
+    identifier;
+    (*add more expressions: binary math ops, bitwise ops, unary math ops *)
+
+function_call_expression = 
+    identifier,
+    "(", [expression, {",", expression}], ")";
+
+type = 
+    [
+        "const", ["untracked"] |
+        "imut" |
+        "static",
+        [
+            "const", ["untracked"] |
+            "untracked"
+        ] |
+        "untracked"
+    ],
+    (primitive_type|identifier);
+
+primitive_type = 
+    "int" | "float" | "char" | "string" | "tty";
