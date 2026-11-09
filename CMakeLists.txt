@@ -12,6 +12,7 @@ add_library(XENOXY STATIC
     src/StateManager.cpp
     src/Interpreter.cpp
     src/Types.cpp
+    src/TypeManager.cpp
 
 )
 
