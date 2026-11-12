@@ -186,6 +186,10 @@ namespace Xenoxy {
                 lhs->data = std::get<std::int64_t>(tokens[0].data);
                 lhs->type = NodeType::Expr_IntLiteral;
                 break;
+            case TokenType::FloatLiteral:
+                lhs->data = std::get<double>(tokens[0].data);
+                lhs->type = NodeType::Expr_FloatLiteral;
+                break;
             case TokenType::LParen:
                 delete lhs;
                 tokens.erase(tokens.begin());

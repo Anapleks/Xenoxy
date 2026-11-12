@@ -113,13 +113,26 @@ namespace Xenoxy {
 
         // returns pointer to this object's data field
         // to be run on ObjectInst objects for fields
-        void* Get();
+        void* Get() const;
+
+        TypeDef* GetType() const;
+
+        ObjectInst operator+(ObjectInst& other);
+        ObjectInst operator-(ObjectInst& other);
+        ObjectInst operator*(ObjectInst& other);
+        ObjectInst operator/(ObjectInst& other);
+        ObjectInst operator%(ObjectInst& other);
+
+        ObjectInst operator==(ObjectInst& other);
 
         // returns true when types match
-        bool TypeCheck(std::string typeName);
+        bool TypeCheck(std::string typeName) const;
     };
 
-    struct VariableSignature {
+    std::ostream& operator<<(std::ostream& os, const ObjectInst& inst);
+
+    struct VariableSignature
+    {
         std::string name;
         std::string type;
         ObjectFlags flags{false, false, false, false};
@@ -127,7 +140,8 @@ namespace Xenoxy {
 
     std::ostream& operator<<(std::ostream& os, const VariableSignature& sig);
 
-    struct FunctionSignature {
+    struct FunctionSignature
+    {
         std::string name;
         std::string type;
         ObjectFlags flags;
@@ -136,53 +150,20 @@ namespace Xenoxy {
 
     std::ostream& operator<<(std::ostream& os, const FunctionSignature& sig);
 
-    struct ObjectRef {
+    struct ObjectRef
+    {
         std::string name;
     };
 
-    struct FunctionRef {
+    struct FunctionRef
+    {
         std::string name;
     };
 
-    // OLD BS BELOW
-
-    class Value;
-    class Object {
-        public:
-        Value* val;
-        ObjectFlags flags;
-        // also mutexes, atomics, etc
-        Object* copy() const;
-        ~Object();
+    struct ObjectHolder
+    {
+        ObjectInst* obj;
     };
-
-    class Value {
-        public:
-        std::variant<
-            std::unordered_map<std::string, Object*>,
-            std::string,
-            std::int64_t,
-            bool,
-            double> data;
-
-        Value* copy() const;
-        ~Value();
-        Value operator+(const Value& rhs);
-        Value operator-(const Value &rhs);
-        Value operator*(const Value &rhs);
-        Value operator/(const Value &rhs);
-        Value operator%(const Value &rhs);
-        Value operator==(const Value &rhs);
-        Value operator>=(const Value &rhs);
-        Value operator<=(const Value &rhs);
-        Value operator>(const Value &rhs);
-        Value operator<(const Value &rhs);
-        Value operator!();
-        Value operator!=(const Value &rhs);
-    };
-
-    std::ostream& operator<<(std::ostream& os, const Object& value);
-    std::ostream& operator<<(std::ostream& os, const Value& value);
 }
 
 #endif

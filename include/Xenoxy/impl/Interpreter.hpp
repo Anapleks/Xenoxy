@@ -6,6 +6,7 @@
 #include <bitset>
 #include "Xenoxy/impl/Types.hpp"
 #include "Xenoxy/impl/StateManager.hpp"
+#include "Xenoxy/impl/TypeManager.hpp"
 
 namespace Xenoxy {
     // struct StatementFrame {
@@ -22,7 +23,6 @@ namespace Xenoxy {
         Node* node=nullptr;
         std::uint64_t idx=0;
         std::uint64_t endIdx=-1;
-        Value val=Value();
         bool popSID = false;
         bool exitSubscope = false;
     };
@@ -35,7 +35,7 @@ namespace Xenoxy {
 
     struct ExecutionFrame {
         std::vector<size_t> stackIdxs;
-        std::vector<Value> results;
+        std::vector<ObjectInst> results;
         size_t rootIdx;
         size_t filled=0;
     };
@@ -45,7 +45,7 @@ namespace Xenoxy {
         // performs test for whether the executionStack is meant to receive or send a request
         bool ExecutionStackTest();
         // adds result of expression evaluation into execution stack
-        void AddResult(Value val);
+        void AddResult(ObjectInst val);
         // pops following the rules set by the controlStack
         void PopStacks();
         // pops control stack, while keeping other stacks synchronised
@@ -54,13 +54,14 @@ namespace Xenoxy {
         void CreateExecutionRequest(std::uint64_t resultCount, bool createSubscope=false);
         public:
         StateManager* stateMgr=nullptr;
+        TypeManager* typeMgr=nullptr;
         // scope Ids, basically rip stack
         std::stack<std::int64_t> scopeIdStack;
         // node execution stack
         std::stack<NodeFrame> nodeFrameStack;
         // gathers results stack
         std::stack<ExecutionFrame> executionStack;
-        Value Call(std::string functionName);
+        ObjectInst Call(std::string functionName);
     };
 }
 

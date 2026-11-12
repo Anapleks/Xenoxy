@@ -5,9 +5,9 @@
 int main()
 {
     std::string src = R"(
-fn pow(base: int, exp: int) -> int {
-    var res: int = 1;
-    var curr_base: int = base;
+fn pow(base: float, exp: int) -> float {
+    var res: float = 1.0;
+    var curr_base: float = base;
     until(exp == 0) {
         if(exp % 2 == 1) {
             res = res * curr_base;
@@ -18,9 +18,10 @@ fn pow(base: int, exp: int) -> int {
     return res;
 }
 
-fn main() -> int {
-    var apples: int = 10;
-    apples = pow(2, 63) - 1;
+fn main() -> float {
+    var apples: float = 10.0;
+    var bananas: float = 20.0;
+    apples = pow(2.0, 63) - 1.0;
     return apples;
 })";
 
@@ -34,7 +35,8 @@ fn main() -> int {
         auto start = std::chrono::steady_clock::now();
         runtime.Load(src);
         auto loadEnd = std::chrono::steady_clock::now();
-        runtime.Run();
+        Xenoxy::ObjectInst retVal = runtime.Run();
+        std::cout<<*(double*)retVal.Get()<<std::endl;
         auto runEnd = std::chrono::steady_clock::now();
 
         auto elapsedRun = std::chrono::duration_cast<std::chrono::microseconds>(runEnd - loadEnd);

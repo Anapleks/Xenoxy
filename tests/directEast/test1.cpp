@@ -60,8 +60,8 @@ int main() {
     
     Xenoxy::Interpreter* interpreter = new Xenoxy::Interpreter();
     interpreter->stateMgr = mgr;
-    Xenoxy::Value retVal = interpreter->Call("main");
-    std::cout<<retVal<<std::endl;
+    Xenoxy::ObjectInst retVal = interpreter->Call("main");
+    std::cout<<*(std::int64_t*)retVal.Get()<<std::endl;
     std::cout<<*mgr<<std::endl;
     delete mgr;
     delete interpreter;

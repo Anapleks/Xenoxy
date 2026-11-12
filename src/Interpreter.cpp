@@ -31,7 +31,7 @@ namespace Xenoxy
                 && this->executionStack.top().filled != this->executionStack.top().stackIdxs.size()));
     }
 
-    void Interpreter::AddResult(Value val)
+    void Interpreter::AddResult(ObjectInst val)
     {
         for(size_t i = 0; i < this->executionStack.top().stackIdxs.size(); i++)
         {
@@ -75,7 +75,7 @@ namespace Xenoxy
 
     }
 
-    Value Interpreter::Call(std::string functionName)
+    ObjectInst Interpreter::Call(std::string functionName)
     {
         std::cout<<functionName<<std::endl;
 
@@ -88,8 +88,8 @@ namespace Xenoxy
 
         std::int64_t sid = this->stateMgr->CreateScope(ref);
         this->scopeIdStack.push(sid);
-        this->nodeFrameStack.push(NodeFrame{rootFunc->scopeEAST, 0, -1ULL, Value(), true, false});
-        Value lastReturn = Value();
+        this->nodeFrameStack.push(NodeFrame{rootFunc->scopeEAST, 0, -1ULL, true, false});
+        ObjectInst lastReturn = this->typeMgr->CreateObjectOfType(rootFunc->signature.type, rootFunc->signature.flags);
         bool returning = false;
 
         // execute until out of all possible scopes/statements/expression
@@ -115,13 +115,29 @@ namespace Xenoxy
             Node* rootNode = this->nodeFrameStack.top().node;
             if(rootNode->subNodes[idx]->type == NodeType::Expr_IntLiteral)
             {
-                this->AddResult(Value{std::get<std::int64_t>(rootNode->subNodes[idx]->data)});
+                ObjectInst inst = this->typeMgr->CreateObjectOfType(
+                    "int",
+                    ObjectFlags{false, false, false, false}
+                );
+                *(std::int64_t*)inst.Get() = std::get<std::int64_t>(rootNode->subNodes[idx]->data);
+
+                this->AddResult(inst);
+            }
+            else if(rootNode->subNodes[idx]->type == NodeType::Expr_FloatLiteral)
+            {
+                ObjectInst inst = this->typeMgr->CreateObjectOfType(
+                    "float",
+                    ObjectFlags{false, false, false, false}
+                );
+                *(double*)inst.Get() = std::get<double>(rootNode->subNodes[idx]->data);
+
+                this->AddResult(inst);
             }
             else if(rootNode->subNodes[idx]->type == NodeType::Expr_ObjAccess)
             {
                 ObjectRef& OR = std::get<ObjectRef>(rootNode->subNodes[idx]->data);
-                Object* obj = this->stateMgr->GetVariable(this->scopeIdStack.top(), OR);
-                this->AddResult(Value(*obj->val));
+                ObjectHolder* obj = this->stateMgr->GetVariable(this->scopeIdStack.top(), OR);
+                this->AddResult(ObjectInst(*obj->obj));
             }
             else if(rootNode->subNodes[idx]->type == NodeType::Expr_Add)
             {
@@ -130,7 +146,7 @@ namespace Xenoxy
                     this->CreateExecutionRequest(2);
                     continue;
                 }
-                Value res = this->executionStack.top().results[0] + this->executionStack.top().results[1];
+                ObjectInst res = this->executionStack.top().results[0] + this->executionStack.top().results[1];
                 this->executionStack.pop();
                 this->AddResult(res);
             }
@@ -141,7 +157,7 @@ namespace Xenoxy
                     this->CreateExecutionRequest(2);
                     continue;
                 }
-                Value res = this->executionStack.top().results[0] - this->executionStack.top().results[1];
+                ObjectInst res = this->executionStack.top().results[0] - this->executionStack.top().results[1];
                 this->executionStack.pop();
                 this->AddResult(res);
             }
@@ -152,7 +168,7 @@ namespace Xenoxy
                     this->CreateExecutionRequest(2);
                     continue;
                 }
-                Value res = this->executionStack.top().results[0] * this->executionStack.top().results[1];
+                ObjectInst res = this->executionStack.top().results[0] * this->executionStack.top().results[1];
                 this->executionStack.pop();
                 this->AddResult(res);
             }
@@ -163,7 +179,7 @@ namespace Xenoxy
                     this->CreateExecutionRequest(2);
                     continue;
                 }
-                Value res = this->executionStack.top().results[0] % this->executionStack.top().results[1];
+                ObjectInst res = this->executionStack.top().results[0] % this->executionStack.top().results[1];
                 this->executionStack.pop();
                 this->AddResult(res);
             }
@@ -174,7 +190,7 @@ namespace Xenoxy
                     this->CreateExecutionRequest(2);
                     continue;
                 }
-                Value res = this->executionStack.top().results[0] / this->executionStack.top().results[1];
+                ObjectInst res = this->executionStack.top().results[0] / this->executionStack.top().results[1];
                 this->executionStack.pop();
                 this->AddResult(res);
             }
@@ -185,65 +201,65 @@ namespace Xenoxy
                     this->CreateExecutionRequest(2);
                     continue;
                 }
-                Value res = this->executionStack.top().results[0] == this->executionStack.top().results[1];
+                ObjectInst res = this->executionStack.top().results[0] == this->executionStack.top().results[1];
                 this->executionStack.pop();
                 this->AddResult(res);
             }
-            else if(rootNode->subNodes[idx]->type == NodeType::Expr_NeqTest)
-            {
-                if(this->ExecutionStackTest())
-                {
-                    this->CreateExecutionRequest(2);
-                    continue;
-                }
-                Value res = this->executionStack.top().results[0] != this->executionStack.top().results[1];
-                this->executionStack.pop();
-                this->AddResult(res);
-            }
-            else if(rootNode->subNodes[idx]->type == NodeType::Expr_GeqTest)
-            {
-                if(this->ExecutionStackTest())
-                {
-                    this->CreateExecutionRequest(2);
-                    continue;
-                }
-                Value res = this->executionStack.top().results[0] >= this->executionStack.top().results[1];
-                this->executionStack.pop();
-                this->AddResult(res);
-            }
-            else if(rootNode->subNodes[idx]->type == NodeType::Expr_LeqTest)
-            {
-                if(this->ExecutionStackTest())
-                {
-                    this->CreateExecutionRequest(2);
-                    continue;
-                }
-                Value res = this->executionStack.top().results[0] <= this->executionStack.top().results[1];
-                this->executionStack.pop();
-                this->AddResult(res);
-            }
-            else if(rootNode->subNodes[idx]->type == NodeType::Expr_GtTest)
-            {
-                if(this->ExecutionStackTest())
-                {
-                    this->CreateExecutionRequest(2);
-                    continue;
-                }
-                Value res = this->executionStack.top().results[0] > this->executionStack.top().results[1];
-                this->executionStack.pop();
-                this->AddResult(res);
-            }
-            else if(rootNode->subNodes[idx]->type == NodeType::Expr_LtTest)
-            {
-                if(this->ExecutionStackTest())
-                {
-                    this->CreateExecutionRequest(2);
-                    continue;
-                }
-                Value res = this->executionStack.top().results[0] < this->executionStack.top().results[1];
-                this->executionStack.pop();
-                this->AddResult(res);
-            }
+            // else if(rootNode->subNodes[idx]->type == NodeType::Expr_NeqTest)
+            // {
+            //     if(this->ExecutionStackTest())
+            //     {
+            //         this->CreateExecutionRequest(2);
+            //         continue;
+            //     }
+            //     ObjectInst res = this->executionStack.top().results[0] != this->executionStack.top().results[1];
+            //     this->executionStack.pop();
+            //     this->AddResult(res);
+            // }
+            // else if(rootNode->subNodes[idx]->type == NodeType::Expr_GeqTest)
+            // {
+            //     if(this->ExecutionStackTest())
+            //     {
+            //         this->CreateExecutionRequest(2);
+            //         continue;
+            //     }
+            //     ObjectInst res = this->executionStack.top().results[0] >= this->executionStack.top().results[1];
+            //     this->executionStack.pop();
+            //     this->AddResult(res);
+            // }
+            // else if(rootNode->subNodes[idx]->type == NodeType::Expr_LeqTest)
+            // {
+            //     if(this->ExecutionStackTest())
+            //     {
+            //         this->CreateExecutionRequest(2);
+            //         continue;
+            //     }
+            //     ObjectInst res = this->executionStack.top().results[0] <= this->executionStack.top().results[1];
+            //     this->executionStack.pop();
+            //     this->AddResult(res);
+            // }
+            // else if(rootNode->subNodes[idx]->type == NodeType::Expr_GtTest)
+            // {
+            //     if(this->ExecutionStackTest())
+            //     {
+            //         this->CreateExecutionRequest(2);
+            //         continue;
+            //     }
+            //     ObjectInst res = this->executionStack.top().results[0] > this->executionStack.top().results[1];
+            //     this->executionStack.pop();
+            //     this->AddResult(res);
+            // }
+            // else if(rootNode->subNodes[idx]->type == NodeType::Expr_LtTest)
+            // {
+            //     if(this->ExecutionStackTest())
+            //     {
+            //         this->CreateExecutionRequest(2);
+            //         continue;
+            //     }
+            //     ObjectInst res = this->executionStack.top().results[0] < this->executionStack.top().results[1];
+            //     this->executionStack.pop();
+            //     this->AddResult(res);
+            // }
             else if(rootNode->subNodes[idx]->type == NodeType::Expr_FuncCall)
             {
                 Node* thisNode = rootNode->subNodes[idx];
@@ -277,19 +293,18 @@ namespace Xenoxy
                     calledFunction->scopeEAST,
                     0,
                     -1ULL,
-                    Value(),
                     true,
                     false
                 });
 
                 for(size_t i = 0; i < this->executionStack.top().results.size(); i++)
                 {
-                    Object* obj = this->stateMgr->CreateVariable(SID, calledFunction->signature.parameters[i]);
-                    obj->val = new Value(this->executionStack.top().results[i]);
+                    ObjectHolder* obj = this->stateMgr->CreateVariable(SID, calledFunction->signature.parameters[i]);
+                    obj->obj = new ObjectInst(this->executionStack.top().results[i]);
                 }
 
                 this->executionStack.pop();
-                lastReturn = Value();
+                lastReturn = this->typeMgr->CreateObjectOfType(rootFunc->signature.type, rootFunc->signature.flags);
                 continue;
             }
             else if(rootNode->subNodes[idx]->type == NodeType::Stmt_Declaration)
@@ -300,8 +315,8 @@ namespace Xenoxy
                     continue;
                 }
                 VariableSignature VS = std::get<VariableSignature>(rootNode->subNodes[idx]->identifier);
-                Object* obj = this->stateMgr->CreateVariable(this->scopeIdStack.top(), VS);
-                obj->val = new Value(this->executionStack.top().results[0]);
+                ObjectHolder* obj = this->stateMgr->CreateVariable(this->scopeIdStack.top(), VS);
+                obj->obj = new ObjectInst(this->executionStack.top().results[0]);
                 this->executionStack.pop();
             }
             else if(rootNode->subNodes[idx]->type == NodeType::Stmt_Assignment)
@@ -312,9 +327,9 @@ namespace Xenoxy
                     continue;
                 }
                 ObjectRef OR = std::get<ObjectRef>(rootNode->subNodes[idx]->identifier);
-                Object* obj = this->stateMgr->GetVariable(this->scopeIdStack.top(), OR);
-                delete obj->val;
-                obj->val = new Value(this->executionStack.top().results[0]);
+                ObjectHolder* obj = this->stateMgr->GetVariable(this->scopeIdStack.top(), OR);
+                delete obj->obj;
+                obj->obj = new ObjectInst(this->executionStack.top().results[0]);
                 this->executionStack.pop();
             }
             else if(rootNode->subNodes[idx]->type == NodeType::Stmt_If)
@@ -324,14 +339,13 @@ namespace Xenoxy
                     this->CreateExecutionRequest(1);
                     continue;
                 }
-                if(std::get<bool>(this->executionStack.top().results[0].data))
+                if(*(bool*)this->executionStack.top().results[0].Get())
                 {
                     this->nodeFrameStack.top().idx++;
                     this->nodeFrameStack.push(NodeFrame{
                         rootNode->subNodes[idx],
                         1,
                         -1ULL,
-                        Value(),
                         false,
                         true
                     });
@@ -348,14 +362,13 @@ namespace Xenoxy
                     this->CreateExecutionRequest(1);
                     continue;
                 }
-                if(!std::get<bool>(this->executionStack.top().results[0].data))
+                if(!*(bool*)this->executionStack.top().results[0].Get())
                 {
                     this->nodeFrameStack.top().idx++;
                     this->nodeFrameStack.push(NodeFrame{
                         rootNode->subNodes[idx],
                         1,
                         -1ULL,
-                        Value(),
                         false,
                         true
                     });
@@ -372,13 +385,12 @@ namespace Xenoxy
                     this->CreateExecutionRequest(1);
                     continue;
                 }
-                if(std::get<bool>(this->executionStack.top().results[0].data))
+                if(*(bool*)this->executionStack.top().results[0].Get())
                 {
                     this->nodeFrameStack.push(NodeFrame{
                         rootNode->subNodes[idx],
                         1,
                         -1ULL,
-                        Value(),
                         false,
                         true
                     });
@@ -395,13 +407,12 @@ namespace Xenoxy
                     this->CreateExecutionRequest(1);
                     continue;
                 }
-                if(!std::get<bool>(this->executionStack.top().results[0].data))
+                if(!*(bool*)this->executionStack.top().results[0].Get())
                 {
                     this->nodeFrameStack.push(NodeFrame{
                         rootNode->subNodes[idx],
                         1,
                         -1ULL,
-                        Value(),
                         false,
                         true
                     });
@@ -418,7 +429,7 @@ namespace Xenoxy
                     this->CreateExecutionRequest(1);
                     continue;
                 }
-                lastReturn = Value(this->executionStack.top().results[0]);
+                lastReturn = this->executionStack.top().results[0];
                 this->ForcePopStacks();
                 returning = true;
                 continue;
@@ -430,6 +441,6 @@ namespace Xenoxy
             }
             this->nodeFrameStack.top().idx++;
         }
-        return Value(lastReturn);
+        return lastReturn;
     }
 }

@@ -1,6 +1,7 @@
 #ifndef Xenoxy_hpp
 #define Xenoxy_hpp
 #include <string>
+#include "Xenoxy/impl/Types.hpp"
 
 namespace Xenoxy {
     class Runtime {
@@ -13,7 +14,7 @@ namespace Xenoxy {
         ~Runtime();
         void Load(std::string code);
         void LoadFile(std::string path);
-        void Run(std::string function="main");
+        ObjectInst Run(std::string function="main");
     };
 }
 

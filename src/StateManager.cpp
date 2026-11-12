@@ -25,7 +25,7 @@ namespace Xenoxy {
         for(auto k : inst.t_Objects)
         {
             if(printed) {os<<',';}
-            os<<"["<<k.first<<"]="<<*k.second;
+                os<<'['<<k.first<<"]="<<*k.second->obj;
             printed=true;
         }
         ScopeInstance* ptr = inst.parentScopeInstance;
@@ -35,7 +35,7 @@ namespace Xenoxy {
             for(auto k : ptr->t_Objects)
             {
                 if(printed) {os<<',';}
-                os<<"["<<k.first<<"]="<<*k.second;
+                os<<'['<<k.first<<"]="<<*k.second->obj;
                 printed=true;
             }
             ptr = ptr->parentScopeInstance;
@@ -80,16 +80,16 @@ namespace Xenoxy {
         delete inst;
     }
 
-    Object* StateManager::CreateVariable(std::int64_t scopeID, VariableSignature& sig) {
+    ObjectHolder* StateManager::CreateVariable(std::int64_t scopeID, VariableSignature& sig) {
         ObjectRef ref = ObjectRef{sig.name};
         if(this->GetVariable(scopeID, ref) != nullptr) { throw std::runtime_error("Double declaration of variable"); }
         ScopeInstance* inst = this->scopeInstances.at(scopeID);
-        inst->t_Objects[ref.name] = new Object();
+        inst->t_Objects[ref.name] = new ObjectHolder();
         // std::cout<<*inst<<std::endl;
         return inst->t_Objects[ref.name];
     }
     
-    Object* StateManager::GetVariable(std::int64_t scopeID, ObjectRef& ref) {
+    ObjectHolder* StateManager::GetVariable(std::int64_t scopeID, ObjectRef& ref) {
         ScopeInstance* inst = this->scopeInstances.at(scopeID);
         // std::cout<<*inst<<std::endl;
 
@@ -118,7 +118,7 @@ namespace Xenoxy {
 
     void StateManager::G_CreateVariable(VariableSignature signature) {
         std::cout<<"Remember to remake G_CreateVariable at a later date!"<<std::endl;
-        Object* obj = new Object();
+        ObjectHolder* obj = new ObjectHolder();
         this->g_Objects[signature.name] = obj;
     }
 

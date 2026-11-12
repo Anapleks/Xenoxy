@@ -14,7 +14,7 @@ namespace Xenoxy {
 
     struct Function {
         // static objects
-        std::unordered_map<std::string, Object*> s_Objects;
+        std::unordered_map<std::string, ObjectHolder*> s_Objects;
         // sub functions
         std::unordered_map<std::string, Function*> s_Functions;
         Node* scopeEAST;
@@ -26,7 +26,7 @@ namespace Xenoxy {
     struct ScopeInstance {
         ScopeInstance* parentScopeInstance = nullptr;
         Function* functionMetadata = nullptr;
-        std::unordered_map<std::string, Object*> t_Objects;
+        std::unordered_map<std::string, ObjectHolder*> t_Objects;
 
         ~ScopeInstance();
     };
@@ -64,7 +64,7 @@ namespace Xenoxy {
         public:
         //                 name         pointer to
         std::unordered_map<std::string, Function*> g_Functions;
-        std::unordered_map<std::string, Object*> g_Objects;
+        std::unordered_map<std::string, ObjectHolder*> g_Objects;
 
         std::int64_t nextID=1;
         std::unordered_map<std::int64_t, ScopeInstance*> scopeInstances;
@@ -73,8 +73,8 @@ namespace Xenoxy {
         void DeleteScope(std::int64_t scopeID);
         void EnterSubscope(std::int64_t scopeID);
         void LeaveSubscope(std::int64_t scopeID);
-        Object* CreateVariable(std::int64_t scopeID, VariableSignature& sig);
-        Object* GetVariable(std::int64_t scopeID, ObjectRef& ref);
+        ObjectHolder* CreateVariable(std::int64_t scopeID, VariableSignature& sig);
+        ObjectHolder* GetVariable(std::int64_t scopeID, ObjectRef& ref);
         void G_CreateFunction(Node* EAST, FunctionSignature signature);
         void G_CreateVariable(VariableSignature signature);
         Function* G_GetFunction(std::string name);
