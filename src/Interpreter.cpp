@@ -299,8 +299,10 @@ namespace Xenoxy
 
                 for(size_t i = 0; i < this->executionStack.top().results.size(); i++)
                 {
-                    ObjectHolder* obj = this->stateMgr->CreateVariable(SID, calledFunction->signature.parameters[i]);
-                    obj->obj = new ObjectInst(this->executionStack.top().results[i]);
+                    VariableSignature VS = calledFunction->signature.parameters[i];
+                    ObjectHolder* obj = this->stateMgr->CreateVariable(SID, VS);
+                    obj->obj = new ObjectInst(this->typeMgr->GetTypeDef(VS.type), VS.flags);
+                    *obj->obj = this->executionStack.top().results[i];
                 }
 
                 this->executionStack.pop();
@@ -316,7 +318,8 @@ namespace Xenoxy
                 }
                 VariableSignature VS = std::get<VariableSignature>(rootNode->subNodes[idx]->identifier);
                 ObjectHolder* obj = this->stateMgr->CreateVariable(this->scopeIdStack.top(), VS);
-                obj->obj = new ObjectInst(this->executionStack.top().results[0]);
+                obj->obj = new ObjectInst(this->typeMgr->GetTypeDef(VS.type), VS.flags);
+                *obj->obj = this->executionStack.top().results[0];
                 this->executionStack.pop();
             }
             else if(rootNode->subNodes[idx]->type == NodeType::Stmt_Assignment)
@@ -328,8 +331,7 @@ namespace Xenoxy
                 }
                 ObjectRef OR = std::get<ObjectRef>(rootNode->subNodes[idx]->identifier);
                 ObjectHolder* obj = this->stateMgr->GetVariable(this->scopeIdStack.top(), OR);
-                delete obj->obj;
-                obj->obj = new ObjectInst(this->executionStack.top().results[0]);
+                *obj->obj = this->executionStack.top().results[0];
                 this->executionStack.pop();
             }
             else if(rootNode->subNodes[idx]->type == NodeType::Stmt_If)

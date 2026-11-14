@@ -1,5 +1,6 @@
 #include "Xenoxy/impl/Types.hpp"
 #include <stdexcept>
+#include <cstring>
 
 namespace Xenoxy {
     std::ostream& operator<<(std::ostream& os, const TypeType& type)
@@ -317,6 +318,17 @@ namespace Xenoxy {
             return ret;
         }
         throw std::runtime_error("Invalid type");
+    }
+
+    ObjectInst& ObjectInst::operator=(const ObjectInst& other)
+    {
+        if(!this->TypeCheck(other.type->name))
+        {
+            throw std::runtime_error("Invalid assignment, type mismatch");
+        }
+
+        memcpy(this->data, other.data, this->type->GetSize());
+        return *this;
     }
 
     bool ObjectInst::TypeCheck(std::string typeName) const

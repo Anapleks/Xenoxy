@@ -5,7 +5,6 @@
 #include <unordered_map>
 #include <cstdint>
 #include <iostream>
-#include <variant>
 
 namespace Xenoxy {
     enum class TypeType
@@ -124,6 +123,8 @@ namespace Xenoxy {
         ObjectInst operator%(ObjectInst& other);
 
         ObjectInst operator==(ObjectInst& other);
+
+        ObjectInst& operator=(const ObjectInst& other);
 
         // returns true when types match
         bool TypeCheck(std::string typeName) const;
