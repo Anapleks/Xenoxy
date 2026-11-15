@@ -5,9 +5,9 @@
 int main()
 {
     std::string src = R"(
-fn pow(base: float, exp: int) -> float {
-    var res: float = 1.0;
-    var curr_base: float = base;
+fn pow(base: int, exp: int) -> int {
+    var res: int = 1;
+    var curr_base: int = base;
     until(exp == 0) {
         if(exp % 2 == 1) {
             res = res * curr_base;
@@ -18,10 +18,10 @@ fn pow(base: float, exp: int) -> float {
     return res;
 }
 
-fn main() -> float {
-    var apples: float = 10.0;
-    var bananas: float = 20.0;
-    apples = pow(2.0, 63) - 1.0;
+fn main() -> int {
+    var apples: int = 10;
+    var bananas: int = 20;
+    apples = pow(2, 63) - 1;
     return apples;
 })";
 

@@ -27,6 +27,12 @@ namespace Xenoxy {
         bool exitSubscope = false;
     };
 
+    struct Scope
+    {
+        std::int64_t scopeID;
+        Function* function;
+    };
+
     struct ControlFrame {
         std::int64_t popMax=0;
         // scopeId -> node
@@ -55,8 +61,8 @@ namespace Xenoxy {
         public:
         StateManager* stateMgr=nullptr;
         TypeManager* typeMgr=nullptr;
-        // scope Ids, basically rip stack
-        std::stack<std::int64_t> scopeIdStack;
+        // scopes, basically rip stack
+        std::stack<Scope> scopeStack;
         // node execution stack
         std::stack<NodeFrame> nodeFrameStack;
         // gathers results stack

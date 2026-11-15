@@ -182,6 +182,13 @@ namespace Xenoxy {
         return this->type;
     }
 
+    void ObjectInst::SetType(TypeDef* type)
+    {
+        this->type = type;
+        free(this->data);
+        this->data = malloc(this->type->GetSize());
+    }
+
     ObjectInst ObjectInst::operator+(ObjectInst& other)
     {
         if(!this->TypeCheck(other.type->name))

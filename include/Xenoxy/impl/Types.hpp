@@ -115,6 +115,7 @@ namespace Xenoxy {
         void* Get() const;
 
         TypeDef* GetType() const;
+        void SetType(TypeDef* type);
 
         ObjectInst operator+(ObjectInst& other);
         ObjectInst operator-(ObjectInst& other);

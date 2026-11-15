@@ -7,10 +7,10 @@ namespace Xenoxy
     {
         if(this->nodeFrameStack.top().popSID)
         {
-            this->stateMgr->DeleteScope(this->scopeIdStack.top());
-            this->scopeIdStack.pop();
+            this->stateMgr->DeleteScope(this->scopeStack.top().scopeID);
+            this->scopeStack.pop();
         }
-        if(this->nodeFrameStack.top().exitSubscope) { this->stateMgr->LeaveSubscope(this->scopeIdStack.top()); }
+        if(this->nodeFrameStack.top().exitSubscope) { this->stateMgr->LeaveSubscope(this->scopeStack.top().scopeID); }
         this->nodeFrameStack.pop();
     }
 
@@ -18,7 +18,7 @@ namespace Xenoxy
     {
         while(!this->nodeFrameStack.top().popSID)
         {
-            if(this->nodeFrameStack.top().exitSubscope) { this->stateMgr->LeaveSubscope(this->scopeIdStack.top()); }
+            if(this->nodeFrameStack.top().exitSubscope) { this->stateMgr->LeaveSubscope(this->scopeStack.top().scopeID); }
             this->nodeFrameStack.pop();
         }
         this->PopStacks();
@@ -87,7 +87,7 @@ namespace Xenoxy
         ref.name = rootFunc->signature.name;
 
         std::int64_t sid = this->stateMgr->CreateScope(ref);
-        this->scopeIdStack.push(sid);
+        this->scopeStack.push(Scope{sid, rootFunc});
         this->nodeFrameStack.push(NodeFrame{rootFunc->scopeEAST, 0, -1ULL, true, false});
         ObjectInst lastReturn = this->typeMgr->CreateObjectOfType(rootFunc->signature.type, rootFunc->signature.flags);
         bool returning = false;
@@ -136,7 +136,7 @@ namespace Xenoxy
             else if(rootNode->subNodes[idx]->type == NodeType::Expr_ObjAccess)
             {
                 ObjectRef& OR = std::get<ObjectRef>(rootNode->subNodes[idx]->data);
-                ObjectHolder* obj = this->stateMgr->GetVariable(this->scopeIdStack.top(), OR);
+                ObjectHolder* obj = this->stateMgr->GetVariable(this->scopeStack.top().scopeID, OR);
                 this->AddResult(ObjectInst(*obj->obj));
             }
             else if(rootNode->subNodes[idx]->type == NodeType::Expr_Add)
@@ -288,7 +288,7 @@ namespace Xenoxy
                 }
 
                 std::int64_t SID = this->stateMgr->CreateScope(FR);
-                this->scopeIdStack.push(SID);
+                this->scopeStack.push(Scope{SID, calledFunction});
                 this->nodeFrameStack.push(NodeFrame{
                     calledFunction->scopeEAST,
                     0,
@@ -306,7 +306,6 @@ namespace Xenoxy
                 }
 
                 this->executionStack.pop();
-                lastReturn = this->typeMgr->CreateObjectOfType(rootFunc->signature.type, rootFunc->signature.flags);
                 continue;
             }
             else if(rootNode->subNodes[idx]->type == NodeType::Stmt_Declaration)
@@ -317,7 +316,7 @@ namespace Xenoxy
                     continue;
                 }
                 VariableSignature VS = std::get<VariableSignature>(rootNode->subNodes[idx]->identifier);
-                ObjectHolder* obj = this->stateMgr->CreateVariable(this->scopeIdStack.top(), VS);
+                ObjectHolder* obj = this->stateMgr->CreateVariable(this->scopeStack.top().scopeID, VS);
                 obj->obj = new ObjectInst(this->typeMgr->GetTypeDef(VS.type), VS.flags);
                 *obj->obj = this->executionStack.top().results[0];
                 this->executionStack.pop();
@@ -330,7 +329,7 @@ namespace Xenoxy
                     continue;
                 }
                 ObjectRef OR = std::get<ObjectRef>(rootNode->subNodes[idx]->identifier);
-                ObjectHolder* obj = this->stateMgr->GetVariable(this->scopeIdStack.top(), OR);
+                ObjectHolder* obj = this->stateMgr->GetVariable(this->scopeStack.top().scopeID, OR);
                 *obj->obj = this->executionStack.top().results[0];
                 this->executionStack.pop();
             }
@@ -352,7 +351,7 @@ namespace Xenoxy
                         true
                     });
                     this->executionStack.pop();
-                    this->stateMgr->EnterSubscope(this->scopeIdStack.top());
+                    this->stateMgr->EnterSubscope(this->scopeStack.top().scopeID);
                     continue;
                 }
                 this->executionStack.pop();
@@ -375,7 +374,7 @@ namespace Xenoxy
                         true
                     });
                     this->executionStack.pop();
-                    this->stateMgr->EnterSubscope(this->scopeIdStack.top());
+                    this->stateMgr->EnterSubscope(this->scopeStack.top().scopeID);
                     continue;
                 }
                 this->executionStack.pop();
@@ -397,7 +396,7 @@ namespace Xenoxy
                         true
                     });
                     this->executionStack.pop();
-                    this->stateMgr->EnterSubscope(this->scopeIdStack.top());
+                    this->stateMgr->EnterSubscope(this->scopeStack.top().scopeID);
                     continue;
                 }
                 this->executionStack.pop();
@@ -419,7 +418,7 @@ namespace Xenoxy
                         true
                     });
                     this->executionStack.pop();
-                    this->stateMgr->EnterSubscope(this->scopeIdStack.top());
+                    this->stateMgr->EnterSubscope(this->scopeStack.top().scopeID);
                     continue;
                 }
                 this->executionStack.pop();
@@ -431,6 +430,8 @@ namespace Xenoxy
                     this->CreateExecutionRequest(1);
                     continue;
                 }
+                std::string returnType = this->scopeStack.top().function->signature.type;
+                lastReturn.SetType(this->typeMgr->GetTypeDef(returnType));
                 lastReturn = this->executionStack.top().results[0];
                 this->ForcePopStacks();
                 returning = true;
