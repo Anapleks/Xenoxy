@@ -1,6 +1,8 @@
 #include "Xenoxy/impl/Interpreter.hpp"
 #include <iostream>
 
+#include "Xenoxy/impl/TypeDefs.hpp"
+
 namespace Xenoxy
 {
     void Interpreter::PopStacks()
@@ -77,7 +79,7 @@ namespace Xenoxy
 
     ObjectInst Interpreter::Call(std::string functionName)
     {
-        std::cout<<functionName<<std::endl;
+        // std::cout<<functionName<<std::endl;
 
         if(this->stateMgr == nullptr) { throw std::runtime_error("Interpreter does not have access to State Manager"); }
         Function* rootFunc = this->stateMgr->G_GetFunction(functionName);
@@ -105,21 +107,24 @@ namespace Xenoxy
                 this->PopStacks();
                 continue;
             }
-            // std::cout<<"nodeFrameSize="<<this->nodeFrameStack.size()
+            std::int64_t idx = this->nodeFrameStack.top().idx;
+            Node* rootNode = this->nodeFrameStack.top().node;
+
+            // std::cout<<"Type="<<rootNode->subNodes[idx]->type
+            //          <<", nodeFrameSize="<<this->nodeFrameStack.size()
             //          <<", executionSize="<<this->executionStack.size()
             //          <<", subSize="<<this->nodeFrameStack.top().node->subNodes.size()
             //          <<", popSID="<<this->nodeFrameStack.top().popSID
             //          <<", idx="<<this->nodeFrameStack.top().idx<<std::endl;
             // std::cout<<*this->stateMgr<<std::endl;
-            std::int64_t idx = this->nodeFrameStack.top().idx;
-            Node* rootNode = this->nodeFrameStack.top().node;
             if(rootNode->subNodes[idx]->type == NodeType::Expr_IntLiteral)
             {
                 ObjectInst inst = this->typeMgr->CreateObjectOfType(
-                    "int",
+                    integerTypeName,
                     ObjectFlags{false, false, false, false}
                 );
                 *(std::int64_t*)inst.Get() = std::get<std::int64_t>(rootNode->subNodes[idx]->data);
+                inst.assignable = false;
 
                 this->AddResult(inst);
             }
@@ -130,6 +135,7 @@ namespace Xenoxy
                     ObjectFlags{false, false, false, false}
                 );
                 *(double*)inst.Get() = std::get<double>(rootNode->subNodes[idx]->data);
+                inst.assignable = false;
 
                 this->AddResult(inst);
             }
@@ -147,6 +153,7 @@ namespace Xenoxy
                     continue;
                 }
                 ObjectInst res = this->executionStack.top().results[0] + this->executionStack.top().results[1];
+                res.assignable = false;
                 this->executionStack.pop();
                 this->AddResult(res);
             }
@@ -158,6 +165,7 @@ namespace Xenoxy
                     continue;
                 }
                 ObjectInst res = this->executionStack.top().results[0] - this->executionStack.top().results[1];
+                res.assignable = false;
                 this->executionStack.pop();
                 this->AddResult(res);
             }
@@ -169,6 +177,7 @@ namespace Xenoxy
                     continue;
                 }
                 ObjectInst res = this->executionStack.top().results[0] * this->executionStack.top().results[1];
+                res.assignable = false;
                 this->executionStack.pop();
                 this->AddResult(res);
             }
@@ -180,6 +189,7 @@ namespace Xenoxy
                     continue;
                 }
                 ObjectInst res = this->executionStack.top().results[0] % this->executionStack.top().results[1];
+                res.assignable = false;
                 this->executionStack.pop();
                 this->AddResult(res);
             }
@@ -191,6 +201,7 @@ namespace Xenoxy
                     continue;
                 }
                 ObjectInst res = this->executionStack.top().results[0] / this->executionStack.top().results[1];
+                res.assignable = false;
                 this->executionStack.pop();
                 this->AddResult(res);
             }
@@ -201,65 +212,88 @@ namespace Xenoxy
                     this->CreateExecutionRequest(2);
                     continue;
                 }
-                ObjectInst res = this->executionStack.top().results[0] == this->executionStack.top().results[1];
+                ObjectInst temp = this->executionStack.top().results[0] == this->executionStack.top().results[1];
+                ObjectInst res = temp.Cast(this->typeMgr->GetTypeDef(booleanTypeName));
+                res.assignable = false;
                 this->executionStack.pop();
                 this->AddResult(res);
             }
-            // else if(rootNode->subNodes[idx]->type == NodeType::Expr_NeqTest)
-            // {
-            //     if(this->ExecutionStackTest())
-            //     {
-            //         this->CreateExecutionRequest(2);
-            //         continue;
-            //     }
-            //     ObjectInst res = this->executionStack.top().results[0] != this->executionStack.top().results[1];
-            //     this->executionStack.pop();
-            //     this->AddResult(res);
-            // }
-            // else if(rootNode->subNodes[idx]->type == NodeType::Expr_GeqTest)
-            // {
-            //     if(this->ExecutionStackTest())
-            //     {
-            //         this->CreateExecutionRequest(2);
-            //         continue;
-            //     }
-            //     ObjectInst res = this->executionStack.top().results[0] >= this->executionStack.top().results[1];
-            //     this->executionStack.pop();
-            //     this->AddResult(res);
-            // }
-            // else if(rootNode->subNodes[idx]->type == NodeType::Expr_LeqTest)
-            // {
-            //     if(this->ExecutionStackTest())
-            //     {
-            //         this->CreateExecutionRequest(2);
-            //         continue;
-            //     }
-            //     ObjectInst res = this->executionStack.top().results[0] <= this->executionStack.top().results[1];
-            //     this->executionStack.pop();
-            //     this->AddResult(res);
-            // }
-            // else if(rootNode->subNodes[idx]->type == NodeType::Expr_GtTest)
-            // {
-            //     if(this->ExecutionStackTest())
-            //     {
-            //         this->CreateExecutionRequest(2);
-            //         continue;
-            //     }
-            //     ObjectInst res = this->executionStack.top().results[0] > this->executionStack.top().results[1];
-            //     this->executionStack.pop();
-            //     this->AddResult(res);
-            // }
-            // else if(rootNode->subNodes[idx]->type == NodeType::Expr_LtTest)
-            // {
-            //     if(this->ExecutionStackTest())
-            //     {
-            //         this->CreateExecutionRequest(2);
-            //         continue;
-            //     }
-            //     ObjectInst res = this->executionStack.top().results[0] < this->executionStack.top().results[1];
-            //     this->executionStack.pop();
-            //     this->AddResult(res);
-            // }
+            else if(rootNode->subNodes[idx]->type == NodeType::Expr_NeqTest)
+            {
+                if(this->ExecutionStackTest())
+                {
+                    this->CreateExecutionRequest(2);
+                    continue;
+                }
+                ObjectInst temp = this->executionStack.top().results[0] != this->executionStack.top().results[1];
+                ObjectInst res = temp.Cast(this->typeMgr->GetTypeDef(booleanTypeName));
+                res.assignable = false;
+                this->executionStack.pop();
+                this->AddResult(res);
+            }
+            else if(rootNode->subNodes[idx]->type == NodeType::Expr_GeqTest)
+            {
+                if(this->ExecutionStackTest())
+                {
+                    this->CreateExecutionRequest(2);
+                    continue;
+                }
+                ObjectInst temp = this->executionStack.top().results[0] >= this->executionStack.top().results[1];
+                ObjectInst res = temp.Cast(this->typeMgr->GetTypeDef(booleanTypeName));
+                res.assignable = false;
+                this->executionStack.pop();
+                this->AddResult(res);
+            }
+            else if(rootNode->subNodes[idx]->type == NodeType::Expr_LeqTest)
+            {
+                if(this->ExecutionStackTest())
+                {
+                    this->CreateExecutionRequest(2);
+                    continue;
+                }
+                ObjectInst temp = this->executionStack.top().results[0] <= this->executionStack.top().results[1];
+                ObjectInst res = temp.Cast(this->typeMgr->GetTypeDef(booleanTypeName));
+                res.assignable = false;
+                this->executionStack.pop();
+                this->AddResult(res);
+            }
+            else if(rootNode->subNodes[idx]->type == NodeType::Expr_GtTest)
+            {
+                if(this->ExecutionStackTest())
+                {
+                    this->CreateExecutionRequest(2);
+                    continue;
+                }
+                ObjectInst temp = this->executionStack.top().results[0] > this->executionStack.top().results[1];
+                ObjectInst res = temp.Cast(this->typeMgr->GetTypeDef(booleanTypeName));
+                res.assignable = false;
+                this->executionStack.pop();
+                this->AddResult(res);
+            }
+            else if(rootNode->subNodes[idx]->type == NodeType::Expr_LtTest)
+            {
+                if(this->ExecutionStackTest())
+                {
+                    this->CreateExecutionRequest(2);
+                    continue;
+                }
+                ObjectInst temp = this->executionStack.top().results[0] < this->executionStack.top().results[1];
+                ObjectInst res = temp.Cast(this->typeMgr->GetTypeDef(booleanTypeName));
+                res.assignable = false;
+                this->executionStack.pop();
+                this->AddResult(res);
+            }
+            else if(rootNode->subNodes[idx]->type == NodeType::Expr_Assign)
+            {
+                if(this->ExecutionStackTest())
+                {
+                    this->CreateExecutionRequest(2);
+                    continue;
+                }
+                if(this->executionStack.top().results[0].assignable = false) { throw std::runtime_error("Invalid assignment"); }
+                this->executionStack.top().results[0] = this->executionStack.top().results[1];
+                this->executionStack.pop();
+            }
             else if(rootNode->subNodes[idx]->type == NodeType::Expr_FuncCall)
             {
                 Node* thisNode = rootNode->subNodes[idx];

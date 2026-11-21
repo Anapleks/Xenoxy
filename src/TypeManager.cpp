@@ -20,6 +20,7 @@ namespace Xenoxy
         auto iter = this->types.find(name);
         if(iter == this->types.end())
         {
+            std::cout<<name<<std::endl;
             throw std::runtime_error("Type not found");
         }
 

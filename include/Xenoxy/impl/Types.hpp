@@ -98,6 +98,7 @@ namespace Xenoxy {
         void* data = nullptr;
 
         public:
+        bool assignable = true;
         ObjectInst() = delete;
         ObjectInst(TypeDef* type, ObjectFlags flags, std::int64_t count=-1, bool owning = true);
         ~ObjectInst();
@@ -117,13 +118,21 @@ namespace Xenoxy {
         TypeDef* GetType() const;
         void SetType(TypeDef* type);
 
+        ObjectInst Cast(TypeDef* type);
+
         ObjectInst operator+(ObjectInst& other);
         ObjectInst operator-(ObjectInst& other);
         ObjectInst operator*(ObjectInst& other);
         ObjectInst operator/(ObjectInst& other);
         ObjectInst operator%(ObjectInst& other);
+        ObjectInst operator!();
 
         ObjectInst operator==(ObjectInst& other);
+        ObjectInst operator!=(ObjectInst& other);
+        ObjectInst operator>=(ObjectInst& other);
+        ObjectInst operator<=(ObjectInst& other);
+        ObjectInst operator>(ObjectInst& other);
+        ObjectInst operator<(ObjectInst& other);
 
         ObjectInst& operator=(const ObjectInst& other);
 
@@ -133,11 +142,17 @@ namespace Xenoxy {
 
     std::ostream& operator<<(std::ostream& os, const ObjectInst& inst);
 
+    struct ObjectHolder
+    {
+        ObjectInst* obj;
+    };
+    
     struct VariableSignature
     {
         std::string name;
         std::string type;
         ObjectFlags flags{false, false, false, false};
+        std::int64_t count = -1;
     };
 
     std::ostream& operator<<(std::ostream& os, const VariableSignature& sig);
@@ -160,11 +175,6 @@ namespace Xenoxy {
     struct FunctionRef
     {
         std::string name;
-    };
-
-    struct ObjectHolder
-    {
-        ObjectInst* obj;
     };
 }
 

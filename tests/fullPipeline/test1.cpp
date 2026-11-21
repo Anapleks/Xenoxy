@@ -25,7 +25,8 @@ fn main() -> int {
     return apples;
 })";
 
-    constexpr int ITERATIONS = 10000;
+
+    constexpr int ITERATIONS = 100000;
 
     std::int64_t totalLoadTime = 0;
     std::int64_t totalRunTime = 0;
@@ -36,7 +37,7 @@ fn main() -> int {
         runtime.Load(src);
         auto loadEnd = std::chrono::steady_clock::now();
         Xenoxy::ObjectInst retVal = runtime.Run();
-        std::cout<<*(double*)retVal.Get()<<std::endl;
+        // std::cout<<*(std::int64_t*)retVal.Get()<<std::endl;
         auto runEnd = std::chrono::steady_clock::now();
 
         auto elapsedRun = std::chrono::duration_cast<std::chrono::microseconds>(runEnd - loadEnd);

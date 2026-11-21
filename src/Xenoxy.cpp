@@ -5,8 +5,9 @@
 #include "Xenoxy/impl/Lexer.hpp"
 #include "Xenoxy/impl/Parser.hpp"
 #include "Xenoxy/impl/StateManager.hpp"
-#include "Xenoxy/impl/TypeManager.hpp"
 #include "Xenoxy/impl/Types.hpp"
+#include "Xenoxy/impl/TypeDefs.hpp"
+#include "Xenoxy/impl/TypeManager.hpp"
 #include "Xenoxy/impl/Interpreter.hpp"
 
 namespace Xenoxy {
@@ -34,9 +35,9 @@ namespace Xenoxy {
 
             this->typeMgr = new TypeManager();
 
-            TypeDef intTypeDef("int", TypeType::Primitive, 8);
-            TypeDef floatTypeDef("float", TypeType::Primitive, 8);
-            TypeDef boolTypeDef("bool", TypeType::Primitive, 1);
+            TypeDef intTypeDef = integerTypeDef;
+            TypeDef floatTypeDef = floatingPointTypeDef;
+            TypeDef boolTypeDef = booleanTypeDef;
 
             this->typeMgr->AddTypeDef(intTypeDef);
             this->typeMgr->AddTypeDef(floatTypeDef);

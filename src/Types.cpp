@@ -2,6 +2,8 @@
 #include <stdexcept>
 #include <cstring>
 
+#include "Xenoxy/impl/TypeDefs.hpp"
+
 namespace Xenoxy {
     std::ostream& operator<<(std::ostream& os, const TypeType& type)
     {
@@ -135,7 +137,7 @@ namespace Xenoxy {
             std::cout<<p.first<<' '<<p.second<<std::endl;
         }
     }
-
+    
     ObjectInst::ObjectInst(TypeDef* type, ObjectFlags flags, std::int64_t count, bool owning)
     : type(type), flags(flags), count(count)
     {
@@ -189,6 +191,41 @@ namespace Xenoxy {
         this->data = malloc(this->type->GetSize());
     }
 
+    ObjectInst ObjectInst::Cast(TypeDef* type)
+    {
+        ObjectInst ret = ObjectInst(type, ObjectFlags{false, false, false, false});
+        if(this->type->name == type->name)
+        {
+            ret = *this;
+        }
+        else if(this->type->name == integerTypeName && type->name == booleanTypeName)
+        {
+            *(bool*)ret.Get() = static_cast<bool>(*(std::int64_t*)this->Get());
+        }
+        else if(this->type->name == floatingPointTypeName && type->name == booleanTypeName)
+        {
+            *(bool*)ret.Get() = static_cast<bool>(*(double*)this->Get());
+        }
+        else if(this->type->name == booleanTypeName && type->name == integerTypeName)
+        {
+            *(std::int64_t*)ret.Get() = static_cast<std::int64_t>(*(bool*)this->Get());
+        }
+        else if(this->type->name == floatingPointTypeName && type->name == integerTypeName)
+        {
+            *(std::int64_t*)ret.Get() = static_cast<std::int64_t>(*(double*)this->Get());
+        }
+        else if(this->type->name == booleanTypeName && type->name == floatingPointTypeName)
+        {
+            *(double*)ret.Get() = static_cast<double>(*(bool*)this->Get());
+        }
+        else if(this->type->name == integerTypeName && type->name == floatingPointTypeName)
+        {
+            *(double*)ret.Get() = static_cast<double>(*(std::int64_t*)this->Get());
+        }
+
+        return ret;
+    }
+
     ObjectInst ObjectInst::operator+(ObjectInst& other)
     {
         if(!this->TypeCheck(other.type->name))
@@ -196,19 +233,19 @@ namespace Xenoxy {
             throw std::runtime_error("operator+ type mismatch");
         }
 
-        if(this->type->name == "int")
+        if(this->type->name == integerTypeName)
         {
             ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
             *(std::int64_t*)ret.Get() = *(std::int64_t*)this->Get() + *(std::int64_t*)other.Get();
             return ret;
         }
-        else if(this->type->name == "float")
+        else if(this->type->name == floatingPointTypeName)
         {
             ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
             *(double*)ret.Get() = *(double*)this->Get() + *(double*)other.Get();
             return ret;
         }
-        else if(this->type->name == "bool")
+        else if(this->type->name == booleanTypeName)
         {
             ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
             *(bool*)ret.Get() = *(bool*)this->Get() + *(bool*)other.Get();
@@ -224,13 +261,13 @@ namespace Xenoxy {
             throw std::runtime_error("operator- type mismatch");
         }
 
-        if(this->type->name == "int")
+        if(this->type->name == integerTypeName)
         {
             ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
             *(std::int64_t*)ret.Get() = *(std::int64_t*)this->Get() - *(std::int64_t*)other.Get();
             return ret;
         }
-        else if(this->type->name == "float")
+        else if(this->type->name == floatingPointTypeName)
         {
             ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
             *(double*)ret.Get() = *(double*)this->Get() - *(double*)other.Get();
@@ -246,13 +283,13 @@ namespace Xenoxy {
             throw std::runtime_error("operator* type mismatch");
         }
 
-        if(this->type->name == "int")
+        if(this->type->name == integerTypeName)
         {
             ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
             *(std::int64_t*)ret.Get() = *(std::int64_t*)this->Get() * *(std::int64_t*)other.Get();
             return ret;
         }
-        else if(this->type->name == "float")
+        else if(this->type->name == floatingPointTypeName)
         {
             ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
             *(double*)ret.Get() = *(double*)this->Get() * *(double*)other.Get();
@@ -268,13 +305,13 @@ namespace Xenoxy {
             throw std::runtime_error("operator/ type mismatch");
         }
 
-        if(this->type->name == "int")
+        if(this->type->name == integerTypeName)
         {
             ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
             *(std::int64_t*)ret.Get() = *(std::int64_t*)this->Get() / *(std::int64_t*)other.Get();
             return ret;
         }
-        else if(this->type->name == "float")
+        else if(this->type->name == floatingPointTypeName)
         {
             ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
             *(double*)ret.Get() = *(double*)this->Get() / *(double*)other.Get();
@@ -290,13 +327,26 @@ namespace Xenoxy {
             throw std::runtime_error("operator% type mismatch");
         }
 
-        if(this->type->name == "int")
+        if(this->type->name == integerTypeName)
         {
             ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
             *(std::int64_t*)ret.Get() = *(std::int64_t*)this->Get() % *(std::int64_t*)other.Get();
             return ret;
         }
         throw std::runtime_error("Invalid type");
+    }
+
+    ObjectInst ObjectInst::operator!()
+    {
+        if(this->type->name != booleanTypeName)
+        {
+            std::cout<<this->type->name<<std::endl;
+            throw std::runtime_error("operator! invalid type");
+        }
+
+        ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
+        *(bool*)ret.Get() = !*(bool*)this->Get();
+        return ret;
     }
 
     ObjectInst ObjectInst::operator==(ObjectInst& other)
@@ -306,22 +356,162 @@ namespace Xenoxy {
             throw std::runtime_error("operator== type mismatch");
         }
 
-        if(this->type->name == "int")
+        if(this->type->name == integerTypeName)
         {
             ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
-            *(std::int64_t*)ret.Get() = *(std::int64_t*)this->Get() == *(std::int64_t*)other.Get();
+            *(std::int64_t*)ret.Get() = (std::int64_t)(*(std::int64_t*)this->Get() == *(std::int64_t*)other.Get());
             return ret;
         }
-        else if(this->type->name == "float")
+        else if(this->type->name == floatingPointTypeName)
         {
             ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
-            *(double*)ret.Get() = *(double*)this->Get() == *(double*)other.Get();
+            *(std::int64_t*)ret.Get() = (std::int64_t)(*(double*)this->Get() == *(double*)other.Get());
             return ret;
         }
-        else if(this->type->name == "bool")
+        else if(this->type->name == booleanTypeName)
         {
             ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
             *(bool*)ret.Get() = *(bool*)this->Get() == *(bool*)other.Get();
+            return ret;
+        }
+        throw std::runtime_error("Invalid type");
+    }
+
+    ObjectInst ObjectInst::operator!=(ObjectInst& other)
+    {
+        if(!this->TypeCheck(other.type->name))
+        {
+            throw std::runtime_error("operator== type mismatch");
+        }
+
+        if(this->type->name == integerTypeName)
+        {
+            ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
+            *(std::int64_t*)ret.Get() = (std::int64_t)(*(std::int64_t*)this->Get() != *(std::int64_t*)other.Get());
+            return ret;
+        }
+        else if(this->type->name == floatingPointTypeName)
+        {
+            ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
+            *(std::int64_t*)ret.Get() = (std::int64_t)(*(double*)this->Get() != *(double*)other.Get());
+            return ret;
+        }
+        else if(this->type->name == booleanTypeName)
+        {
+            ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
+            *(bool*)ret.Get() = *(bool*)this->Get() != *(bool*)other.Get();
+            return ret;
+        }
+        throw std::runtime_error("Invalid type");
+    }
+
+    ObjectInst ObjectInst::operator>=(ObjectInst& other)
+    {
+        if(!this->TypeCheck(other.type->name))
+        {
+            throw std::runtime_error("operator>= type mismatch");
+        }
+
+        if(this->type->name == integerTypeName)
+        {
+            ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
+            *(std::int64_t*)ret.Get() = (std::int64_t)(*(std::int64_t*)this->Get() >= *(std::int64_t*)other.Get());
+            return ret;
+        }
+        else if(this->type->name == floatingPointTypeName)
+        {
+            ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
+            *(std::int64_t*)ret.Get() = (std::int64_t)(*(double*)this->Get() >= *(double*)other.Get());
+            return ret;
+        }
+        else if(this->type->name == booleanTypeName)
+        {
+            ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
+            *(bool*)ret.Get() = *(bool*)this->Get() >= *(bool*)other.Get();
+            return ret;
+        }
+        throw std::runtime_error("Invalid type");
+    }
+
+    ObjectInst ObjectInst::operator<=(ObjectInst& other)
+    {
+        if(!this->TypeCheck(other.type->name))
+        {
+            throw std::runtime_error("operator<= type mismatch");
+        }
+
+        if(this->type->name == integerTypeName)
+        {
+            ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
+            *(std::int64_t*)ret.Get() = (std::int64_t)(*(std::int64_t*)this->Get() <= *(std::int64_t*)other.Get());
+            return ret;
+        }
+        else if(this->type->name == floatingPointTypeName)
+        {
+            ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
+            *(std::int64_t*)ret.Get() = (std::int64_t)(*(double*)this->Get() <= *(double*)other.Get());
+            return ret;
+        }
+        else if(this->type->name == booleanTypeName)
+        {
+            ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
+            *(bool*)ret.Get() = *(bool*)this->Get() <= *(bool*)other.Get();
+            return ret;
+        }
+        throw std::runtime_error("Invalid type");
+    }
+
+    ObjectInst ObjectInst::operator>(ObjectInst& other)
+    {
+        if(!this->TypeCheck(other.type->name))
+        {
+            throw std::runtime_error("operator> type mismatch");
+        }
+
+        if(this->type->name == integerTypeName)
+        {
+            ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
+            *(std::int64_t*)ret.Get() = (std::int64_t)(*(std::int64_t*)this->Get() > *(std::int64_t*)other.Get());
+            return ret;
+        }
+        else if(this->type->name == floatingPointTypeName)
+        {
+            ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
+            *(std::int64_t*)ret.Get() = (std::int64_t)(*(double*)this->Get() > *(double*)other.Get());
+            return ret;
+        }
+        else if(this->type->name == booleanTypeName)
+        {
+            ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
+            *(bool*)ret.Get() = *(bool*)this->Get() > *(bool*)other.Get();
+            return ret;
+        }
+        throw std::runtime_error("Invalid type");
+    }
+
+    ObjectInst ObjectInst::operator<(ObjectInst& other)
+    {
+        if(!this->TypeCheck(other.type->name))
+        {
+            throw std::runtime_error("operator< type mismatch");
+        }
+
+        if(this->type->name == integerTypeName)
+        {
+            ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
+            *(std::int64_t*)ret.Get() = (std::int64_t)(*(std::int64_t*)this->Get() < *(std::int64_t*)other.Get());
+            return ret;
+        }
+        else if(this->type->name == floatingPointTypeName)
+        {
+            ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
+            *(std::int64_t*)ret.Get() = (std::int64_t)(*(double*)this->Get() < *(double*)other.Get());
+            return ret;
+        }
+        else if(this->type->name == booleanTypeName)
+        {
+            ObjectInst ret = ObjectInst(this->type, ObjectFlags{false, false, false, false});
+            *(bool*)ret.Get() = *(bool*)this->Get() < *(bool*)other.Get();
             return ret;
         }
         throw std::runtime_error("Invalid type");
@@ -347,15 +537,15 @@ namespace Xenoxy {
     {
         std::cout<<inst.GetType()->name<<' ';
 
-        if(inst.GetType()->name == "int")
+        if(inst.GetType()->name == integerTypeName)
         {
             os<<*(std::int64_t*)inst.Get();
         }
-        else if(inst.GetType()->name == "float")
+        else if(inst.GetType()->name == floatingPointTypeName)
         {
             os<<*(double*)inst.Get();
         }
-        else if(inst.GetType()->name == "bool")
+        else if(inst.GetType()->name == booleanTypeName)
         {
             std::string value = *(bool*)inst.Get() ? "True" : "False";
             os<<value;

@@ -3,9 +3,9 @@
 #include <vector>
 #include <variant>
 #include <cstdint>
+#include <string>
 
 #include "Xenoxy/impl/Types.hpp"
-#include <string>
 
 namespace Xenoxy {
     enum class NodeType {
@@ -59,6 +59,11 @@ namespace Xenoxy {
         Expr_GtTest,
         // monostate + subNodes [0] - lhs, [1] - rhs
         Expr_LtTest,
+        // monostate + subnodes [0] - lhs, [1] - rhs
+        Expr_Assign,
+        // monostate + subnodes [0] - objectBeingIndexed, [1] - index
+        Expr_Index,
+
     };
 
     class Node {

@@ -24,8 +24,14 @@ namespace Xenoxy
         case NodeType::Stmt_Expression:
             os<<"NodeType::Stmt_Expression";
             break;
+        case NodeType::Stmt_Function:
+            os<<"NodeType::Stmt_Function";
+            break;
         case NodeType::Stmt_If:
             os<<"NodeType::Stmt_If";
+            break;
+        case NodeType::Stmt_Unless:
+            os<<"NodeType::Stmt_Unless";
             break;
         case NodeType::Stmt_While:
             os<<"NodeType::Stmt_While";
@@ -42,11 +48,20 @@ namespace Xenoxy
         case NodeType::Expr_EqTest:
             os<<"NodeType::Expr_EqTest";
             break;
+        case NodeType::Expr_NeqTest:
+            os<<"NodeType::Expr_NeqTest";
+            break;
         case NodeType::Expr_GeqTest:
             os<<"NodeType::Expr_GeqTest";
             break;
         case NodeType::Expr_LeqTest:
             os<<"NodeType::Expr_LeqTest";
+            break;
+        case NodeType::Expr_GtTest:
+            os<<"NodeType::Expr_GtTest";
+            break;
+        case NodeType::Expr_LtTest:
+            os<<"NodeType::Expr_LtTest";
             break;
         case NodeType::Expr_FloatLiteral:
             os<<"NodeType::Expr_FloatLiteral";
@@ -65,6 +80,18 @@ namespace Xenoxy
             break;
         case NodeType::Expr_Sub:
             os<<"NodeType::Expr_Sub";
+            break;
+        case NodeType::Expr_Assign:
+            os<<"NodeType::Expr_Assign";
+            break;
+        case NodeType::Expr_Mod:
+            os<<"NodeType::Expr_Mod";
+            break;
+        case NodeType::Expr_Div:
+            os<<"NodeType::Expr_Div";
+            break;
+        case NodeType::Expr_Index:
+            os<<"NodeType::Expr_Div";
             break;
         default:
             break;

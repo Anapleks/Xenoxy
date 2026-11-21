@@ -36,6 +36,14 @@ target_link_libraries(fp_test1 PRIVATE
     XENOXY
 )
 
+add_executable(fp_test2
+    fullPipeline/test2.cpp
+)
+
+target_link_libraries(fp_test2 PRIVATE
+    XENOXY
+)
+
 add_executable(nt_test1
     newType/test1.cpp
 )

@@ -110,7 +110,14 @@ namespace Xenoxy {
         case TokenType::Div:
             os<<"TokenType::Div";
             break;
+        case TokenType::LSquare:
+            os<<"TokenType::LSquare";
+            break;
+        case TokenType::RSquare:
+            os<<"TokenType::RSquare";
+            break;
         default:
+            os<<static_cast<std::int64_t>(value);
             break;
         }
         return os;
@@ -196,6 +203,18 @@ namespace Xenoxy {
                 }
                 if(code[i] == '}') {
                     tokens.push_back({TokenType::RBrace, std::monostate()});
+                    i++;
+                    row++;
+                    continue;
+                }
+                if(code[i] == '[') {
+                    tokens.push_back({TokenType::LSquare, std::monostate()});
+                    i++;
+                    row++;
+                    continue;
+                }
+                if(code[i] == ']') {
+                    tokens.push_back({TokenType::RSquare, std::monostate()});
                     i++;
                     row++;
                     continue;

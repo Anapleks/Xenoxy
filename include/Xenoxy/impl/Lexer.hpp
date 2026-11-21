@@ -12,8 +12,8 @@ namespace Xenoxy {
     //  null  fn   (        )       {       }       ->   var                =      +     -     ==   !=
         Null, Fn, LParen, RParen, LBrace, RBrace, Arrow, Var, Identifier, Equals, Plus, Minus, Eq, Neq, 
         IntLiteral, StringLiteral, FloatLiteral, Semi, Colon, If, Unless, Elif, Else, Return, Comma, Eof,
-    //     *       >=   <=          >  <           %    /
-        Asterisk, Geq, Leq, While, Gt, Lt, Until, Mod, Div
+    //     *       >=   <=          >  <           %    /      [        ]
+        Asterisk, Geq, Leq, While, Gt, Lt, Until, Mod, Div, LSquare, RSquare
     };
 
     std::ostream& operator<<(std::ostream& os, const TokenType& value);

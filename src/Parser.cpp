@@ -2,26 +2,13 @@
 #include <iostream>
 
 namespace Xenoxy {
-    Token& Parser::Peek(std::int64_t offset)
+    Token Parser::Peek(std::int64_t offset)
     {
         if(offset + this->m_tokenIdx >= this->m_tokens.size())
         {
-            throw ParserError("Unable to peek");
+            return Token{TokenType::Eof, std::monostate()};
         }
 
-        return this->m_tokens[this->m_tokenIdx + offset];
-    }
-
-    Token& Parser::ExpectAndPeek(TokenType type, std::int64_t offset)
-    {
-        if(offset + this->m_tokenIdx >= this->m_tokens.size())
-        {
-            throw ParserError("Unable to peek");
-        }
-        if(this->m_tokens[this->m_tokenIdx + offset].type != type)
-        {
-            throw ParserError("Expected different symbol");
-        }
         return this->m_tokens[this->m_tokenIdx + offset];
     }
 
@@ -34,25 +21,69 @@ namespace Xenoxy {
     {
         if(this->m_tokens[this->m_tokenIdx].type != type)
         {
+            std::cout<<this->m_tokens[this->m_tokenIdx]<<std::endl;
             throw ParserError("Expected different symbol");
         }
         this->m_tokenIdx++;
     }
 
-    VariableSignature Parser::ParseVariableSignature()
+    bool Parser::HasTokens()
     {
-        Token& identifier = this->ExpectAndPeek(TokenType::Identifier, 0);
-        this->Consume();
-        this->ExpectAndConsume(TokenType::Colon);
-        VariableSignature VS = this->ParseType();
-        VS.name = std::get<std::string>(identifier.data);
-        return VS;
+        return this->m_tokenIdx < this->m_tokens.size();
+    }
+
+    Parser::ParserRange Parser::findRange(TokenType eol)
+    {
+        ParserRange pr{this->m_tokenIdx};
+
+        while(this->m_tokens[pr.endIdx].type != eol && this->m_tokens[pr.endIdx].type != TokenType::Eof)
+        {
+            pr.endIdx++;
+        }
+        return pr;
+    }
+
+    std::vector<Parser::ParserRange> Parser::findListRanges(TokenType open, TokenType close, TokenType sep)
+    {
+        std::vector<ParserRange> res;
+
+        std::int64_t currIdx=this->m_tokenIdx;
+        std::int64_t openParen = 0;
+        while(true)
+        {
+            if(this->m_tokens[currIdx].type == TokenType::Eof)
+            {
+                throw ParserError("List not closed");
+            }
+            if(this->m_tokens[currIdx].type == sep)
+            {
+                res.push_back(ParserRange{currIdx});
+            }
+            if(this->m_tokens[currIdx].type == close)
+            {
+                openParen--;
+                if(openParen == 0)
+                {
+                    if(this->m_tokenIdx+1 != currIdx)
+                    {
+                        res.push_back(ParserRange{currIdx});
+                    }
+                    break;
+                }
+            }
+            if(this->m_tokens[currIdx].type == open)
+            {
+                openParen++;
+            }
+            currIdx++;
+        }
+        return res;
     }
 
     VariableSignature Parser::ParseType()
     {
         VariableSignature VS;
-        Token& type = this->Peek(0);
+        Token type = this->Peek(0);
         while(type.type == TokenType::Identifier)
         {
             if(std::get<std::string>(type.data) == "const")
@@ -87,183 +118,244 @@ namespace Xenoxy {
         return VS;
     }
 
-    bool IsPostfix(const TokenType& c)
+    VariableSignature Parser::ParseVariableSignature()
+    {
+        Token identifier = this->Peek(0);
+        this->ExpectAndConsume(TokenType::Identifier);
+        this->ExpectAndConsume(TokenType::Colon);
+        VariableSignature VS = this->ParseType();
+        VS.name = std::get<std::string>(identifier.data);
+        return VS;
+    }
+
+    FunctionSignature Parser::ParseFunctionSignature()
+    {
+        this->ExpectAndConsume(TokenType::Fn);
+        Token identifier = this->Peek();
+        this->ExpectAndConsume(TokenType::Identifier);
+        this->ExpectAndConsume(TokenType::LParen);
+        std::vector<VariableSignature> argSignatures;
+        while(this->Peek().type != TokenType::RParen && this->HasTokens())
+        {
+            argSignatures.push_back(this->ParseVariableSignature());
+            if(this->Peek().type != TokenType::Comma && this->Peek().type != TokenType::RParen)
+            {
+                throw ParserError("Expected Comma or RParen");
+            }
+            if(this->Peek().type == TokenType::Comma)
+            {
+                this->Consume();
+                if(this->Peek().type == TokenType::RParen)
+                {
+                    throw ParserError("Expected next argument signature");
+                }
+            }
+        }
+        this->ExpectAndConsume(TokenType::RParen);
+        this->ExpectAndConsume(TokenType::Arrow);
+        VariableSignature type = this->ParseType();
+        FunctionSignature FS;
+        FS.name = std::get<std::string>(identifier.data);
+        FS.parameters = argSignatures;
+        FS.type = type.type;
+        FS.flags = type.flags;
+        return FS;
+    }
+
+    bool Parser::IsPostfix(const TokenType& c)
     {
         switch (c)
         {
             case TokenType::LParen: return true;
+            case TokenType::LSquare: return true;
+            default: return false;
+        }
+    }
+
+    bool Parser::IsPrefix(const TokenType& c)
+    {
+        switch (c)
+        {
             default: return false;
         }
     }
 
     // if right == true -> right binding power, if right == false -> left binding power
-    float ExpressionPrecedence(const TokenType& c, bool right)
+    float Parser::ExpressionPrecedence(const TokenType& c, bool right)
     {
         switch(c)
         {
-            case TokenType::Geq: return right ? 0.1 : 0.0;
-            case TokenType::Leq: return right ? 0.1 : 0.0;
-            case TokenType::Gt: return right ? 0.1 : 0.0;
-            case TokenType::Lt: return right ? 0.1 : 0.0;
-            case TokenType::Eq: return right ? 0.1 : 0.0;
-            case TokenType::Neq: return right ? 0.1 : 0.0;
-            case TokenType::Plus: return right ? 1.1 : 1.0;
-            case TokenType::Minus: return right ? 1.1 : 1.0;
-            case TokenType::Asterisk: return right ? 2.1 : 2.0;
-            case TokenType::Mod: return right ? 2.1 : 2.0;
-            case TokenType::Div: return right ? 2.1 : 2.0;
+            case TokenType::Equals: return right ? 0.0 : 0.1;
+            case TokenType::Geq: return right ? 1.1 : 1.0;
+            case TokenType::Leq: return right ? 1.1 : 1.0;
+            case TokenType::Gt: return right ? 1.1 : 1.0;
+            case TokenType::Lt: return right ? 1.1 : 1.0;
+            case TokenType::Eq: return right ? 1.1 : 1.0;
+            case TokenType::Neq: return right ? 1.1 : 1.0;
+            case TokenType::Plus: return right ? 2.1 : 2.0;
+            case TokenType::Minus: return right ? 2.1 : 2.0;
+            case TokenType::Asterisk: return right ? 3.1 : 3.0;
+            case TokenType::Mod: return right ? 3.1 : 3.0;
+            case TokenType::Div: return right ? 3.1 : 3.0;
             default:
+                std::cout<<c<<std::endl;
                 throw ParserError("Unexpected op type");
         }
     }
 
-    Node* Parser::ParsePostfixExpression(std::vector<Token>& tokens, Node* lhs)
-    {
-        Token op = Token(tokens[0]);
-
-        // parse func call
-        if(op.type == TokenType::LParen)
-        {
-            size_t parenCount=1;
-            tokens.erase(tokens.begin());
-
-            Node* funcCall = lhs;
-            funcCall->type = NodeType::Expr_FuncCall;
-            FunctionRef FR{std::get<ObjectRef>(lhs->data).name};
-            funcCall->data = FR;
-
-            std::vector<Token> argTokens;
-
-            while(true)
-            {
-                if(tokens[0].type == TokenType::Eof) { throw ParserError("No closing parenthesis"); }
-                else if(parenCount == 0) { throw ParserError("Too Many closing parenthesis"); }
-                else if(parenCount == 1 && tokens[0].type == TokenType::RParen)
-                {
-                    // closing paren, no more args
-
-                    if(argTokens.size() == 0)
-                    {
-                        if(lhs->subNodes.size() > 0)
-                        {
-                            throw ParserError("Expected another argument");
-                        }
-                        break;
-                    }
-                    argTokens.push_back(Token{TokenType::Eof});
-                    lhs->subNodes.push_back(this->ParseExpression(argTokens));
-                    argTokens.clear();
-                    tokens.erase(tokens.begin());
-                    break;
-                }
-                else if(parenCount == 1 && tokens[0].type == TokenType::Comma)
-                {
-                    // make new subnode, more than 1 argument passed
-                    if(argTokens.size() == 0) { throw ParserError("Expected an argument"); }
-                    argTokens.push_back(Token{TokenType::Eof});
-                    lhs->subNodes.push_back(this->ParseExpression(argTokens));
-                    argTokens.clear();
-                } 
-                else { argTokens.push_back(tokens[0]); }
-                if(tokens[0].type == TokenType::LParen) { parenCount++; }
-                if(tokens[0].type == TokenType::RParen) { parenCount--; }
-                tokens.erase(tokens.begin());
-            }
-        }
-        return lhs;
-    }
-
-    Node* Parser::ParseExpression(std::vector<Token>& tokens, float minBp)
+    Node* Parser::GenerateLHSNode(ParserRange pr, Token tokenL)
     {
         Node* lhs = new Node();
-        switch(tokens[0].type)
+        switch (tokenL.type)
         {
-            case TokenType::Identifier:
-                lhs->data = ObjectRef{std::get<std::string>(tokens[0].data)};
-                lhs->type = NodeType::Expr_ObjAccess;
+        case TokenType::Identifier:
+            lhs->data = ObjectRef{std::get<std::string>(tokenL.data)};
+            lhs->type = NodeType::Expr_ObjAccess;
+            return lhs;
+        
+        case TokenType::IntLiteral:
+            lhs->data = std::get<std::int64_t>(tokenL.data);
+            lhs->type = NodeType::Expr_IntLiteral;
+            return lhs;
+
+        case TokenType::FloatLiteral:
+            lhs->data = std::get<double>(tokenL.data);
+            lhs->type = NodeType::Expr_FloatLiteral;
+            return lhs;
+        
+        case TokenType::LParen:
+            delete lhs;
+            this->Consume();
+            lhs = this->ParseExpression(pr);
+        default:
+            delete lhs;
+            std::cout<<"tokenL: "<<tokenL<<std::endl;
+            throw ParserError("Invalid tokenL type");
+        }
+    }
+
+    Node* Parser::GenerateParentNode(Node* lhs, Token op, Node* rhs)
+    {
+        Node* parent = new Node();
+        parent->subNodes.push_back(lhs);
+        parent->subNodes.push_back(rhs);
+
+        switch(op.type)
+        {
+            case TokenType::Plus:
+                parent->type = NodeType::Expr_Add;
                 break;
-            case TokenType::IntLiteral:
-                lhs->data = std::get<std::int64_t>(tokens[0].data);
-                lhs->type = NodeType::Expr_IntLiteral;
+            case TokenType::Minus:
+                parent->type = NodeType::Expr_Sub;
                 break;
-            case TokenType::FloatLiteral:
-                lhs->data = std::get<double>(tokens[0].data);
-                lhs->type = NodeType::Expr_FloatLiteral;
+            case TokenType::Asterisk:
+                parent->type = NodeType::Expr_Mult;
                 break;
-            case TokenType::LParen:
-                delete lhs;
-                tokens.erase(tokens.begin());
-                lhs = ParseExpression(tokens);
+            case TokenType::Div:
+                parent->type = NodeType::Expr_Div;
+                break;
+            case TokenType::Mod:
+                parent->type = NodeType::Expr_Mod;
+                break;
+            case TokenType::Eq:
+                parent->type = NodeType::Expr_EqTest;
+                break;
+            case TokenType::Neq:
+                parent->type = NodeType::Expr_NeqTest;
+                break;
+            case TokenType::Gt:
+                parent->type = NodeType::Expr_GtTest;
+                break;
+            case TokenType::Geq:
+                parent->type = NodeType::Expr_GeqTest;
+                break;
+            case TokenType::Lt:
+                parent->type = NodeType::Expr_LtTest;
+                break;
+            case TokenType::Leq:
+                parent->type = NodeType::Expr_LeqTest;
+                break;
+            case TokenType::Equals:
+                parent->type = NodeType::Expr_Assign;
                 break;
             default:
-                delete lhs;
-                throw ParserError("Unexpected TokenL type");
+                std::cout<<op.type<<std::endl;
+                throw ParserError("Unexpected op TokenType");
         }
+        return parent;
+    }
 
-        tokens.erase(tokens.begin());
+    Node* Parser::ParsePrefixExpression(ParserRange pr, Node* lhs)
+    {
+        
+    }
+
+    Node* Parser::ParsePostfixExpression(ParserRange pr, Node* lhs)
+    {
+        if(this->Peek().type == TokenType::LParen)
+        {
+            std::vector<ParserRange> ranges = this->findListRanges(TokenType::LParen, TokenType::RParen);
+            lhs->type = NodeType::Expr_FuncCall;
+            this->ExpectAndConsume(TokenType::LParen);
+            for(size_t i=0; i<ranges.size(); i++)
+            {
+                if(ranges[i].endIdx - this->m_tokenIdx <= 0)
+                {
+                    throw std::runtime_error("Invalid size of argument");
+                }
+
+                lhs->subNodes.push_back(this->ParseExpression(ranges[i]));
+                if(this->Peek().type == TokenType::Comma)
+                {
+                    this->ExpectAndConsume(TokenType::Comma);
+                }
+            }
+            this->ExpectAndConsume(TokenType::RParen);
+            ObjectRef OR = std::get<ObjectRef>(lhs->data);
+            FunctionRef FR{OR.name};
+            lhs->data = FR;
+            return lhs;
+        }
+    }
+
+    Node* Parser::ParseExpression(ParserRange pr, float minBp)
+    {
+        Token tokenL = this->Peek();
+        Node* lhs = this->GenerateLHSNode(pr, tokenL);
+        // if(this->IsPrefix(tokenL.type)) { this->ParsePrefixExpression(pr, lhs); }
+        this->Consume();
         while(true)
         {
-            if(tokens[0].type == TokenType::Eof)
+            if(!this->HasTokens() || this->m_tokenIdx >= pr.endIdx)
             {
                 return lhs;
             }
-            if(tokens[0].type == TokenType::RParen)
+            if(this->Peek().type == TokenType::RParen)
             {
                 return lhs;
+            }
+
+            Token op = this->Peek();
+            if(this->IsPostfix(op.type))
+            {
+                this->ParsePostfixExpression(pr, lhs);
+                continue;
             }
             
-            Token op = Token(tokens[0]);
-            if(IsPostfix(op.type)) { lhs = this->ParsePostfixExpression(tokens, lhs); continue; }
-            float leftBp = ExpressionPrecedence(op.type, false);
-            float rightBp = ExpressionPrecedence(op.type, true);
+            float leftBp = this->ExpressionPrecedence(op.type, false);
+            float rightBp = this->ExpressionPrecedence(op.type, true);
 
             if(leftBp < minBp)
             {
                 return lhs;
             }
 
-            tokens.erase(tokens.begin());
-            Node* rhs = this->ParseExpression(tokens, rightBp);
+            this->Consume();
 
-            Node* parent = new Node();
-            parent->subNodes.push_back(lhs);
-            parent->subNodes.push_back(rhs);
-            switch(op.type)
-            {
-                case TokenType::Plus:
-                    parent->type = NodeType::Expr_Add;
-                    break;
-                case TokenType::Minus:
-                    parent->type = NodeType::Expr_Sub;
-                    break;
-                case TokenType::Asterisk:
-                    parent->type = NodeType::Expr_Mult;
-                    break;
-                case TokenType::Eq:
-                    parent->type = NodeType::Expr_EqTest;
-                    break;
-                case TokenType::Neq:
-                    parent->type = NodeType::Expr_NeqTest;
-                    break;
-                case TokenType::Geq:
-                    parent->type = NodeType::Expr_GeqTest;
-                    break;
-                case TokenType::Leq:
-                    parent->type = NodeType::Expr_LeqTest;
-                    break;
-                case TokenType::Gt:
-                    parent->type = NodeType::Expr_GtTest;
-                    break;
-                case TokenType::Lt:
-                    parent->type = NodeType::Expr_LtTest;
-                    break;
-                case TokenType::Mod:
-                    parent->type = NodeType::Expr_Mod;
-                    break;
-                case TokenType::Div:
-                    parent->type = NodeType::Expr_Div;
-                    break;
-            }
+            Node* rhs = this->ParseExpression(pr, rightBp);
+
+            Node* parent = this->GenerateParentNode(lhs, op, rhs);
+
             lhs = parent;
         }
     }
@@ -272,190 +364,117 @@ namespace Xenoxy {
     {
         Node* programRoot = new Node();
         this->m_parent.push(programRoot);
-        while(this->m_tokenIdx < this->m_tokens.size())
+        while(this->HasTokens())
         {
-            Token& next = this->Peek(0);
+            Token next = this->Peek();
             if(next.type == TokenType::Fn)
             {
-                this->Consume();
-                Token& identifier = this->ExpectAndPeek(TokenType::Identifier, 0);
-                this->Consume();
-                FunctionSignature FS;
-                FS.name = std::get<std::string>(identifier.data);
-                this->ExpectAndConsume(TokenType::LParen);
-                
-                while(this->Peek(0).type != TokenType::RParen)
-                {
-                    VariableSignature VS = this->ParseVariableSignature();
-                    FS.parameters.push_back(VS);
-                    if(this->Peek(0).type != TokenType::RParen)
-                    {
-                        if(this->Peek(0).type != TokenType::Comma) { throw ParserError("Unexpected token"); }
-                        this->Consume();
-                    }
-                }
-                this->ExpectAndConsume(TokenType::RParen);
-                this->ExpectAndConsume(TokenType::Arrow);
-                VariableSignature VS = this->ParseType();
-                FS.type = VS.type;
-                FS.flags = VS.flags;
-                Node* fnNode = new Node();
-                fnNode->identifier = FS;
-                fnNode->type = NodeType::Stmt_Function;
-                this->m_parent.top()->subNodes.push_back(fnNode);
-                this->m_parent.push(fnNode);
+                FunctionSignature FS = this->ParseFunctionSignature();
+                Node* funcNode = new Node();
+                funcNode->type = NodeType::Stmt_Function;
+                funcNode->identifier = FS;
+                this->m_parent.top()->subNodes.push_back(funcNode);
+                this->m_parent.push(funcNode);
+                this->ExpectAndConsume(TokenType::LBrace);
+                continue;
             }
             else if(next.type == TokenType::Var)
             {
-                this->Consume();
+                this->ExpectAndConsume(TokenType::Var);
                 VariableSignature VS = this->ParseVariableSignature();
+                Node* declNode = new Node();
+                declNode->type = NodeType::Stmt_Declaration;
+                declNode->identifier = VS;
                 if(this->Peek().type == TokenType::Semi)
                 {
                     this->Consume();
+                    this->m_parent.top()->subNodes.push_back(declNode);
                     continue;
                 }
-                else if(this->Peek().type != TokenType::Equals)
+                if(this->Peek().type != TokenType::Equals)
                 {
-                    throw ParserError("Expected semicolon or equals sign");
+                    throw ParserError("Expected Semi or Equals");
                 }
                 this->Consume();
-                std::vector<Token> expression = {};
-                while(this->Peek().type != TokenType::Semi && this->Peek().type != TokenType::Eof) {
-                    expression.push_back(this->Peek());
-                    this->Consume();
-                }
-                this->ExpectAndPeek(TokenType::Semi, 0);
-                expression.push_back(Token{TokenType::Eof});
-                Node* varNode = new Node();
-                varNode->identifier = VS;
-                varNode->type = NodeType::Stmt_Declaration;
-                varNode->subNodes.push_back(this->ParseExpression(expression));
 
-                this->m_parent.top()->subNodes.push_back(varNode);
+                ParserRange PR = this->findRange();
+                Node* exprRoot = this->ParseExpression(PR);
+                declNode->subNodes.push_back(exprRoot);
+                this->m_parent.top()->subNodes.push_back(declNode);
             }
             else if(next.type == TokenType::Return)
             {
-                this->Consume();
-                
-                std::vector<Token> expression = {};
-                while(this->Peek().type != TokenType::Semi && this->Peek().type != TokenType::Eof) {
-                    expression.push_back(this->Peek());
-                    this->Consume();
-                }
-                this->ExpectAndPeek(TokenType::Semi, 0);
-                expression.push_back(Token{TokenType::Eof});
+                this->ExpectAndConsume(TokenType::Return);
+                ParserRange pr = this->findRange();
+                Node* expr = this->ParseExpression(pr);
                 Node* returnNode = new Node();
                 returnNode->type = NodeType::Stmt_Return;
-                returnNode->subNodes.push_back(this->ParseExpression(expression));
-
+                returnNode->subNodes.push_back(expr);
                 this->m_parent.top()->subNodes.push_back(returnNode);
-            }
-            else if(next.type == TokenType::Identifier)
-            {
-                if(this->Peek(1).type == TokenType::Equals)
-                {
-                    std::string ident = std::get<std::string>(next.data);
-                    this->Consume(2);
-
-                    std::vector<Token> expression = {};
-                    while(this->Peek().type != TokenType::Semi && this->Peek().type != TokenType::Eof) {
-                        expression.push_back(this->Peek());
-                        this->Consume();
-                    }
-                    this->ExpectAndPeek(TokenType::Semi, 0);
-                    expression.push_back(Token{TokenType::Eof});
-                    Node* assignNode = new Node();
-                    assignNode->type = NodeType::Stmt_Assignment;
-                    assignNode->identifier = ObjectRef{ident};
-                    assignNode->subNodes.push_back(this->ParseExpression(expression));
-
-                    this->m_parent.top()->subNodes.push_back(assignNode);
-                }
             }
             else if(next.type == TokenType::If)
             {
-                this->Consume();
+                this->ExpectAndConsume(TokenType::If);
                 this->ExpectAndConsume(TokenType::LParen);
-                std::vector<Token> expression = {};
-                while(this->Peek().type != TokenType::RParen && this->Peek().type != TokenType::Eof) {
-                    expression.push_back(this->Peek());
-                    this->Consume();
-                }
-                this->ExpectAndPeek(TokenType::RParen, 0);
-                expression.push_back(Token{TokenType::Eof});
+                ParserRange pr = this->findRange(TokenType::RParen);
+                Node* expr = this->ParseExpression(pr);
                 Node* ifNode = new Node();
                 ifNode->type = NodeType::Stmt_If;
-                ifNode->subNodes.push_back(this->ParseExpression(expression));
-
+                ifNode->subNodes.push_back(expr);
                 this->m_parent.top()->subNodes.push_back(ifNode);
-
                 this->m_parent.push(ifNode);
             }
             else if(next.type == TokenType::Unless)
             {
-                this->Consume();
+                this->ExpectAndConsume(TokenType::Unless);
                 this->ExpectAndConsume(TokenType::LParen);
-                std::vector<Token> expression = {};
-                while(this->Peek().type != TokenType::RParen && this->Peek().type != TokenType::Eof) {
-                    expression.push_back(this->Peek());
-                    this->Consume();
-                }
-                this->ExpectAndPeek(TokenType::RParen, 0);
-                expression.push_back(Token{TokenType::Eof});
-                Node* unlessNode = new Node();
-                unlessNode->type = NodeType::Stmt_Unless;
-                unlessNode->subNodes.push_back(this->ParseExpression(expression));
-
-                this->m_parent.top()->subNodes.push_back(unlessNode);
-
-                this->m_parent.push(unlessNode);
+                ParserRange pr = this->findRange(TokenType::RParen);
+                Node* expr = this->ParseExpression(pr);
+                Node* ifNode = new Node();
+                ifNode->type = NodeType::Stmt_Unless;
+                ifNode->subNodes.push_back(expr);
+                this->m_parent.top()->subNodes.push_back(ifNode);
+                this->m_parent.push(ifNode);
             }
             else if(next.type == TokenType::While)
             {
-                this->Consume();
+                this->ExpectAndConsume(TokenType::While);
                 this->ExpectAndConsume(TokenType::LParen);
-                std::vector<Token> expression = {};
-                while(this->Peek().type != TokenType::RParen && this->Peek().type != TokenType::Eof) {
-                    expression.push_back(this->Peek());
-                    this->Consume();
-                }
-                this->ExpectAndPeek(TokenType::RParen, 0);
-                expression.push_back(Token{TokenType::Eof});
-                Node* whileNode = new Node();
-                whileNode->type = NodeType::Stmt_While;
-                whileNode->subNodes.push_back(this->ParseExpression(expression));
-
-                this->m_parent.top()->subNodes.push_back(whileNode);
-
-                this->m_parent.push(whileNode);
+                ParserRange pr = this->findRange(TokenType::RParen);
+                Node* expr = this->ParseExpression(pr);
+                Node* ifNode = new Node();
+                ifNode->type = NodeType::Stmt_While;
+                ifNode->subNodes.push_back(expr);
+                this->m_parent.top()->subNodes.push_back(ifNode);
+                this->m_parent.push(ifNode);
             }
             else if(next.type == TokenType::Until)
             {
-                this->Consume();
+                this->ExpectAndConsume(TokenType::Until);
                 this->ExpectAndConsume(TokenType::LParen);
-                std::vector<Token> expression = {};
-                while(this->Peek().type != TokenType::RParen && this->Peek().type != TokenType::Eof) {
-                    expression.push_back(this->Peek());
-                    this->Consume();
-                }
-                this->ExpectAndPeek(TokenType::RParen, 0);
-                expression.push_back(Token{TokenType::Eof});
-                Node* untilNode = new Node();
-                untilNode->type = NodeType::Stmt_Until;
-                untilNode->subNodes.push_back(this->ParseExpression(expression));
-
-                this->m_parent.top()->subNodes.push_back(untilNode);
-
-                this->m_parent.push(untilNode);
+                ParserRange pr = this->findRange(TokenType::RParen);
+                Node* expr = this->ParseExpression(pr);
+                Node* ifNode = new Node();
+                ifNode->type = NodeType::Stmt_Until;
+                ifNode->subNodes.push_back(expr);
+                this->m_parent.top()->subNodes.push_back(ifNode);
+                this->m_parent.push(ifNode);
             }
             else if(next.type == TokenType::RBrace)
             {
-                this->m_parent.pop();
-                if(this->m_parent.size() == 0)
+                if(this->m_parent.size() == 1) 
                 {
-                    throw ParserError("Too many closing braces");
+                    throw ParserError("Too many closing Braces '}'");
                 }
+                this->m_parent.pop();
             }
+            else if(next.type == TokenType::Identifier)
+            {
+                ParserRange pr = this->findRange();
+                Node* expr = this->ParseExpression(pr);
+                this->m_parent.top()->subNodes.push_back(expr);
+            }
+            
             this->Consume();
         }
         return programRoot;
