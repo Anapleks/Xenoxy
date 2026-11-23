@@ -39,6 +39,7 @@ namespace Xenoxy {
         FunctionSignature ParseFunctionSignature();
         Node* GenerateLHSNode(ParserRange pr, Token tokenL);
         Node* GenerateParentNode(Node* lhs, Token op, Node* rhs);
+        Node* ParseArray(Node* arrayParent);
         Node* ParsePrefixExpression(ParserRange pr, Node* lhs);
         Node* ParsePostfixExpression(ParserRange pr, Node* lhs);
         Node* ParseExpression(ParserRange pr, float minBp=0.0);

@@ -131,10 +131,33 @@ namespace Xenoxy
             else if(rootNode->subNodes[idx]->type == NodeType::Expr_FloatLiteral)
             {
                 ObjectInst inst = this->typeMgr->CreateObjectOfType(
-                    "float",
+                    floatingPointTypeName,
                     ObjectFlags{false, false, false, false}
                 );
                 *(double*)inst.Get() = std::get<double>(rootNode->subNodes[idx]->data);
+                inst.assignable = false;
+
+                this->AddResult(inst);
+            }
+            else if(rootNode->subNodes[idx]->type == NodeType::Expr_Array)
+            {
+                if(this->ExecutionStackTest())
+                {
+                    this->CreateExecutionRequest(rootNode->subNodes[idx]->subNodes.size());
+                    continue;
+                }
+                ObjectInst inst = this->typeMgr->CreateArrayOfType(
+                    this->executionStack.top().results[0].GetType()->name,
+                    ObjectFlags{false, false, false, false},
+                    rootNode->subNodes[idx]->subNodes.size()
+                );
+
+                for(size_t i = 0; i < this->executionStack.top().results.size(); i++)
+                {
+                    inst[i] = this->executionStack.top().results[i];
+                }
+                
+                this->executionStack.pop();
                 inst.assignable = false;
 
                 this->AddResult(inst);
@@ -283,6 +306,19 @@ namespace Xenoxy
                 this->executionStack.pop();
                 this->AddResult(res);
             }
+            else if(rootNode->subNodes[idx]->type == NodeType::Expr_Index)
+            {
+                if(this->ExecutionStackTest())
+                {
+                    this->CreateExecutionRequest(2);
+                    continue;
+                }
+                ObjectInst temp = this->executionStack.top().results[0];
+                ObjectInst res = temp[*(std::int64_t*)this->executionStack.top().results[1].Get()];
+                res.assignable = false;
+                this->executionStack.pop();
+                this->AddResult(res);
+            }
             else if(rootNode->subNodes[idx]->type == NodeType::Expr_Assign)
             {
                 if(this->ExecutionStackTest())
@@ -351,7 +387,7 @@ namespace Xenoxy
                 }
                 VariableSignature VS = std::get<VariableSignature>(rootNode->subNodes[idx]->identifier);
                 ObjectHolder* obj = this->stateMgr->CreateVariable(this->scopeStack.top().scopeID, VS);
-                obj->obj = new ObjectInst(this->typeMgr->GetTypeDef(VS.type), VS.flags);
+                obj->obj = new ObjectInst(this->typeMgr->GetTypeDef(VS.type), VS.flags, VS.isArray ? 0 : -1);
                 *obj->obj = this->executionStack.top().results[0];
                 this->executionStack.pop();
             }

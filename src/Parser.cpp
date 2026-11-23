@@ -115,6 +115,12 @@ namespace Xenoxy {
             this->Consume();
             type = this->Peek(0);
         }
+        if(this->Peek().type == TokenType::LSquare)
+        {
+            VS.isArray = true;
+            this->ExpectAndConsume(TokenType::LSquare);
+            this->ExpectAndConsume(TokenType::RSquare);
+        }
         return VS;
     }
 
@@ -227,6 +233,11 @@ namespace Xenoxy {
             delete lhs;
             this->Consume();
             lhs = this->ParseExpression(pr);
+        case TokenType::LSquare:
+            lhs->type = NodeType::Expr_Array;
+            lhs->data = std::monostate();
+            this->ParseArray(lhs);
+            return lhs;
         default:
             delete lhs;
             std::cout<<"tokenL: "<<tokenL<<std::endl;
@@ -285,6 +296,20 @@ namespace Xenoxy {
         return parent;
     }
 
+    Node* Parser::ParseArray(Node* arrayParent)
+    {
+        for(auto range : this->findListRanges())
+        {
+            if(this->Peek().type==TokenType::LSquare) { this->Consume(); }
+            arrayParent->subNodes.push_back(this->ParseExpression(range));
+            if(this->Peek().type == TokenType::Comma)
+            {
+                this->Consume();
+            }
+        }
+        return arrayParent;
+    }
+
     Node* Parser::ParsePrefixExpression(ParserRange pr, Node* lhs)
     {
         
@@ -316,6 +341,23 @@ namespace Xenoxy {
             lhs->data = FR;
             return lhs;
         }
+        if(this->Peek().type == TokenType::LSquare)
+        {
+            ParserRange range = this->findListRanges()[0];
+            Node* parent = new Node();
+            parent->type = NodeType::Expr_Index;
+            parent->subNodes.push_back(lhs);
+
+            this->ExpectAndConsume(TokenType::LSquare);
+            if(range.endIdx - this->m_tokenIdx <= 0)
+            {
+                throw std::runtime_error("Invalid size of argument");
+            }
+
+            parent->subNodes.push_back(this->ParseExpression(range));
+            this->ExpectAndConsume(TokenType::RSquare);
+            return parent;
+        }
     }
 
     Node* Parser::ParseExpression(ParserRange pr, float minBp)
@@ -338,7 +380,7 @@ namespace Xenoxy {
             Token op = this->Peek();
             if(this->IsPostfix(op.type))
             {
-                this->ParsePostfixExpression(pr, lhs);
+                lhs = this->ParsePostfixExpression(pr, lhs);
                 continue;
             }
             

@@ -6,13 +6,20 @@ int main()
 {
     std::string src = R"(
 fn main() -> int {
-    var fruitCounts: int[] = [10, 20, 30];
-    fruitCounts[2] = 15;
-    fruitCounts[1] = 35;
+    var fruitCounts: int[] = [1, 20, 30, 40];
+    fruitCounts[fruitCounts[0] + 1] = 15;
+    fruitCounts[fruitCounts[0]] = 35;
+    fruitCounts[2] = fruitCounts[2] * fruitCounts[1];
     return fruitCounts[2];
 })";
+/*
+    Xenoxy array syntax:
+    [expr, expr, expr, ..., expr] - array declaration with set values
+    name[expr]                    - array indexing
+    new type[expr]                - array declaration with given size
+*/
 
-    constexpr int ITERATIONS = 1;
+    constexpr int ITERATIONS = 100000;
 
     std::int64_t totalLoadTime = 0;
     std::int64_t totalRunTime = 0;
@@ -23,7 +30,7 @@ fn main() -> int {
         runtime.Load(src);
         auto loadEnd = std::chrono::steady_clock::now();
         Xenoxy::ObjectInst retVal = runtime.Run();
-        std::cout<<*(std::int64_t*)retVal.Get()<<std::endl;
+        // std::cout<<*(std::int64_t*)retVal.Get()<<std::endl;
         auto runEnd = std::chrono::steady_clock::now();
 
         auto elapsedRun = std::chrono::duration_cast<std::chrono::microseconds>(runEnd - loadEnd);
@@ -35,5 +42,5 @@ fn main() -> int {
     std::cout<<"Test over "<<ITERATIONS<<" iterations:"<<std::endl;
     std::cout<<"AVG Load: "<<totalLoadTime/double(ITERATIONS)<<" us"<<std::endl;
     std::cout<<"AVG Run: "<<totalRunTime/double(ITERATIONS)<<" us"<<std::endl;
-    // expected result: int 9223372036854775807
+    // expected result: int 525
 }

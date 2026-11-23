@@ -91,7 +91,10 @@ namespace Xenoxy
             os<<"NodeType::Expr_Div";
             break;
         case NodeType::Expr_Index:
-            os<<"NodeType::Expr_Div";
+            os<<"NodeType::Expr_Index";
+            break;
+        case NodeType::Expr_Array:
+            os<<"NodeType::Expr_Array";
             break;
         default:
             break;

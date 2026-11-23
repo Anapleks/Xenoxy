@@ -63,7 +63,8 @@ namespace Xenoxy {
         Expr_Assign,
         // monostate + subnodes [0] - objectBeingIndexed, [1] - index
         Expr_Index,
-
+        // monostate + subnodes [0] - index 0 of array, [1] - index 1 of array, ... [n] - index n of array
+        Expr_Array,
     };
 
     class Node {

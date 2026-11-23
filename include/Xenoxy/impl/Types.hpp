@@ -14,7 +14,7 @@ namespace Xenoxy {
         // int, float, char, bool
         Primitive,
         // user defined classes
-        Composite
+        Composite,
     };
 
     std::ostream& operator<<(std::ostream& os, const TypeType& type);
@@ -109,11 +109,13 @@ namespace Xenoxy {
 
         // returns an ObjectInst object for the given index in an array,
         // throws error when attempting to index an ObjectInst that is not an array
-        ObjectInst operator[](std::int64_t index);
+        ObjectInst operator[](std::int64_t index) const;
 
         // returns pointer to this object's data field
         // to be run on ObjectInst objects for fields
         void* Get() const;
+
+        std::int64_t Size() const;
 
         TypeDef* GetType() const;
         void SetType(TypeDef* type);
@@ -152,7 +154,7 @@ namespace Xenoxy {
         std::string name;
         std::string type;
         ObjectFlags flags{false, false, false, false};
-        std::int64_t count = -1;
+        bool isArray = false;
     };
 
     std::ostream& operator<<(std::ostream& os, const VariableSignature& sig);

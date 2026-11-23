@@ -170,13 +170,31 @@ namespace Xenoxy {
             return subInst;
         }
 
-        throw std::runtime_error("Arrays not to be indexed with operator[]");
+        throw std::runtime_error("Arrays not to be subscripted with '.'");
+    }
+
+    ObjectInst ObjectInst::operator[](const std::int64_t index) const
+    {
+        if(this->count == -1)
+        {
+            throw std::runtime_error("Non-array being indexed");
+        }
+        
+        std::int64_t offset = this->type->GetSize() * index;
+        ObjectInst subInst(this->type, this->flags, -1, false);
+        subInst.data = (void*)((std::int64_t)this->data + offset);
+        return subInst;
     }
 
     void* ObjectInst::Get() const
     {
         if(this->type->type != TypeType::Primitive) { throw std::runtime_error("Trying to get not primitive type"); }
         return this->data;
+    }
+
+    std::int64_t ObjectInst::Size() const
+    {
+        return this->count;
     }
 
     TypeDef* ObjectInst::GetType() const
@@ -523,8 +541,18 @@ namespace Xenoxy {
         {
             throw std::runtime_error("Invalid assignment, type mismatch");
         }
+        if((this->count == -1 && other.count != -1) || (this->count != -1 && other.count == -1))
+        {
+            throw std::runtime_error("Attempted to assign array to single instance or the other way around");
+        }
 
-        memcpy(this->data, other.data, this->type->GetSize());
+        if(this->count != other.count)
+        {
+            this->count = other.count;
+            free(this->data);
+            this->data = malloc(other.Size() * other.type->GetSize());
+        }
+        memcpy(this->data, other.data, this->type->GetSize() * (this->count == -1 ? 1 : this->count));
         return *this;
     }
 
@@ -539,7 +567,22 @@ namespace Xenoxy {
 
         if(inst.GetType()->name == integerTypeName)
         {
-            os<<*(std::int64_t*)inst.Get();
+            if(inst.Size() != -1)
+            {
+                os<<"[";
+                bool printed = false;
+                for(std::int64_t i = 0; i < inst.Size(); i++)
+                {
+                    if(printed) { os<<", "; }
+                    os<<*(std::int64_t*)(inst[i].Get());
+                    printed=true;
+                }
+                os<<']';
+            }
+            else
+            {
+                os<<*(std::int64_t*)inst.Get();
+            }
         }
         else if(inst.GetType()->name == floatingPointTypeName)
         {
@@ -549,6 +592,10 @@ namespace Xenoxy {
         {
             std::string value = *(bool*)inst.Get() ? "True" : "False";
             os<<value;
+        }
+        else
+        {
+
         }
         return os;
     }
